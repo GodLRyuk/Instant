@@ -33,6 +33,7 @@ dependencies:
   sign_in_button: ^3.0.0
   google_sign_in: ^6.2.1
   expansion_tile_list: ^0.1.1
+  expansion_tile_card: ^3.0.0
 
 
   # The following adds the Cupertino Icons font to your application.

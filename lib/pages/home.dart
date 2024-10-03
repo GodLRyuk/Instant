@@ -97,68 +97,62 @@ class _HomepageState extends State<Homepage> {
   }
 
   Widget trending_product() {
-    return GestureDetector(
-      onTap: () {
-        Navigator.push(
-            context, MaterialPageRoute(builder: (context) => const Homepage()));
-      },
-      child: Container(
-        width: 170,
-        margin: const EdgeInsets.only(left: 15, top: 15, bottom: 15),
-        child: Material(
-          elevation: 15.0,
-          borderRadius: BorderRadius.circular(20),
-          child: Container(
-            padding: const EdgeInsets.all(14),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Image.asset("images/product.jpg"),
-                Text(
-                  "Amul Taaza",
-                  style: Supportwidget.productDetailsStyle(),
-                ),
-                Text(
-                  "Toned Fesh Milk...",
-                  style: Supportwidget.productDetailsStyle(),
-                ),
-                Text(
-                  "500 ml",
-                  style: Supportwidget.productQtyStyle(),
-                ),
-                const SizedBox(
-                  height: 8.0,
-                ),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      "\u20B9 25",
-                      style: Supportwidget.productPriceStyle(),
-                    ),
-                    ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        foregroundColor: Colors.red, // Text color
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(50),
-                            side: const BorderSide(
-                                color: Colors.red) // Rounded corners
-                            ),
-                      ),
-                      onPressed: () {
-                        Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const Singleproductdetails(),
+    return Container(
+      width: 170,
+      margin: const EdgeInsets.only(left: 15, top: 15, bottom: 15),
+      child: Material(
+        elevation: 7.0,
+        borderRadius: BorderRadius.circular(20),
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Image.asset("images/product.jpg"),
+              Text(
+                "Amul Taaza",
+                style: Supportwidget.productDetailsStyle(),
+              ),
+              Text(
+                "Toned Fesh Milk...",
+                style: Supportwidget.productDetailsStyle(),
+              ),
+              Text(
+                "500 ml",
+                style: Supportwidget.productQtyStyle(),
+              ),
+              const SizedBox(
+                height: 8.0,
+              ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    "\u20B9 25",
+                    style: Supportwidget.productPriceStyle(),
+                  ),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      foregroundColor: Colors.red, // Text color
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(50),
+                          side: const BorderSide(
+                              color: Colors.red) // Rounded corners
                           ),
-                        );
-                      },
-                      child: const Text("Add"),
                     ),
-                  ],
-                ),
-              ],
-            ),
+                    onPressed: () {
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const Singleproductdetails(),
+                        ),
+                      );
+                    },
+                    child: const Text("Add"),
+                  ),
+                ],
+              ),
+            ],
           ),
         ),
       ),

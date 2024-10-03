@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:instant/pages/home.dart';
 import 'package:instant/pages/support/supportWidget.dart';
+import 'package:expansion_tile_card/expansion_tile_card.dart';
 
 class Singleproductdetails extends StatefulWidget {
   const Singleproductdetails({super.key});
@@ -157,11 +158,11 @@ class _SingleproductdetailsState extends State<Singleproductdetails> {
     );
   }
 
-  // Function to build an ExpansionTile inside a container with shadow
-  // Function to build an ExpansionTile inside a container with shadow
+  // Function to build an ExpansionTileCard inside a container with shadow
   Widget _buildExpansionTileBox(String title, String subTitle) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 16.0), // Space between boxes
+      margin: const EdgeInsets.only(bottom: 16.0),
+      padding: EdgeInsets.all(20), // Space between boxes
       decoration: BoxDecoration(
         color: Colors.white, // Box background color
         borderRadius: BorderRadius.circular(12.0), // Rounded corners
@@ -174,23 +175,17 @@ class _SingleproductdetailsState extends State<Singleproductdetails> {
           ),
         ],
       ),
-      child: Material(
-        color: Colors.transparent, // Prevents any default Material styling
-        child: ExpansionTile(
-          title: Text(title),
-          tilePadding: EdgeInsets.zero, // Remove tile padding
-          childrenPadding: EdgeInsets.zero, // Remove children padding
-          backgroundColor: Colors.white, // Set background color when expanded
-          children: [
-            Container(
-              margin: EdgeInsets.only(top: 0), // Adjust as needed
-              child: ListTile(
-                title: Text(subTitle),
-                contentPadding: EdgeInsets.zero, // Remove padding from ListTile
-              ),
-            ),
-          ],
-        ),
+      child: ExpansionTileCard(
+        title: Text(title), // Optional subtitle
+        baseColor: Colors.white, // Base background color
+        expandedColor: Colors.white, // Expanded background color
+        elevation: 0, // No elevation to remove the top border line
+        children: [
+          ListTile(
+            title: Text(subTitle),
+            contentPadding: EdgeInsets.zero, // Remove padding from ListTile
+          ),
+        ],
       ),
     );
   }
