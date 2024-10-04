@@ -16,45 +16,61 @@ class _SingleproductdetailsState extends State<Singleproductdetails> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(90),
-        child: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                Color(0xfff7d486),
-                Color(0Xffe9b7ce),
-              ],
-            ),
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              AppBar(
-                backgroundColor: Colors.transparent,
-                elevation: 0,
-                title: SizedBox(
-                  height: 40,
-                  child: GestureDetector(
-                    onTap: () {
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const Homepage(),
-                        ),
-                      );
-                    },
-                    child: const Icon(
-                      Icons.arrow_back_ios_new_outlined,
-                      color: Colors.black,
-                    ),
-                  ),
-                ),
-              ),
-            ],
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: GestureDetector(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const Homepage()),
+            );
+          },
+          child: const Icon(
+            Icons.arrow_back_ios_new_outlined,
+            color: Colors.black,
           ),
         ),
       ),
+      // appBar: PreferredSize(
+      //   preferredSize: const Size.fromHeight(90),
+      //   child: Container(
+      //     decoration: const BoxDecoration(
+      //       gradient: LinearGradient(
+      //         colors: [
+      //           Color(0xfff7d486),
+      //           Color(0Xffe9b7ce),
+      //         ],
+      //       ),
+      //     ),
+      //     child: Column(
+      //       mainAxisAlignment: MainAxisAlignment.center,
+      //       children: [
+      //         AppBar(
+      //           backgroundColor: Colors.transparent,
+      //           elevation: 0,
+      //           title: SizedBox(
+      //             height: 40,
+      //             child: GestureDetector(
+      //               onTap: () {
+      //                 Navigator.pushReplacement(
+      //                   context,
+      //                   MaterialPageRoute(
+      //                     builder: (context) => const Homepage(),
+      //                   ),
+      //                 );
+      //               },
+      //               child: const Icon(
+      //                 Icons.arrow_back_ios_new_outlined,
+      //                 color: Colors.black,
+      //               ),
+      //             ),
+      //           ),
+      //         ),
+      //       ],
+      //     ),
+      //   ),
+      // ),
       body: SingleChildScrollView(
         child: Container(
           margin: const EdgeInsets.only(top: 0, left: 20, right: 20),
@@ -162,7 +178,7 @@ class _SingleproductdetailsState extends State<Singleproductdetails> {
   Widget _buildExpansionTileBox(String title, String subTitle) {
     return Container(
       margin: const EdgeInsets.only(bottom: 16.0),
-      padding: EdgeInsets.all(20), // Space between boxes
+      padding: EdgeInsets.only(left: 10), // Space between boxes
       decoration: BoxDecoration(
         color: Colors.white, // Box background color
         borderRadius: BorderRadius.circular(12.0), // Rounded corners
