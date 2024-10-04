@@ -178,7 +178,7 @@ class _SingleproductdetailsState extends State<Singleproductdetails> {
   Widget _buildExpansionTileBox(String title, String subTitle) {
     return Container(
       margin: const EdgeInsets.only(bottom: 16.0),
-      padding: EdgeInsets.only(left: 10), // Space between boxes
+      padding: const EdgeInsets.only(left: 10), // Space between boxes
       decoration: BoxDecoration(
         color: Colors.white, // Box background color
         borderRadius: BorderRadius.circular(12.0), // Rounded corners

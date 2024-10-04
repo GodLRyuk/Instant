@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1052737060139",
+    "project_id": "instant-db708",
+    "storage_bucket": "instant-db708.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1052737060139:android:edd1261e3971900afe596e",
+        "android_client_info": {
+          "package_name": "com.example.instant"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBH6tny5EWjaJgeoDLBHFx4-UxCyyqBQC8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
