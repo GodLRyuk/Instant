@@ -1,0 +1,150 @@
+import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:instant_delivery/route/app_routes.dart';
+import 'package:instant_delivery/widgets/buttons/custom_button.dart';
+import '../../controllers/auth_controller.dart';
+
+class LoginPage extends StatelessWidget {
+  final AuthController authController = Get.find<AuthController>();
+
+  final TextEditingController userNameController = TextEditingController();
+  final TextEditingController passwordController = TextEditingController();
+
+  LoginPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    // Get screen dimensions
+    final double screenHeight = MediaQuery.of(context).size.height;
+    final double screenWidth = MediaQuery.of(context).size.width;
+
+    return Scaffold(
+      body: Obx(
+        () => authController.isLoading.value
+            ? Center(child: CircularProgressIndicator())
+            : Container(
+                width: double.infinity,
+                height: double.infinity,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      Color(0xFFE3F2FD), // Very light blue
+                      Color(0xFFBBDEFB), // Soft sky blue
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                ),
+                child: SingleChildScrollView(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: screenWidth * 0.08,
+                      vertical: screenHeight * 0.1,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        SizedBox(height: screenHeight * 0.01),
+                        Image.asset(
+                          'assets/images/logo_transperent.png',
+                          width: screenWidth * 0.90,
+                          fit: BoxFit.contain,
+                        ),
+                        SizedBox(height: screenHeight * 0.10),
+
+                        // Username Field
+                        Container(
+                          width: double.infinity,
+                          padding: EdgeInsets.symmetric(
+                            horizontal: screenWidth * 0.05,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(15),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black12,
+                                blurRadius: 4, // softer shadow
+                                offset: Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: TextField(
+                            controller: userNameController,
+                            decoration: InputDecoration(
+                              hintText: 'User Name',
+                              border: InputBorder.none,
+                            ),
+                          ),
+                        ),
+                        SizedBox(height: screenHeight * 0.025),
+
+                        // Password Field
+                        Container(
+                          width: double.infinity,
+                          padding: EdgeInsets.symmetric(
+                            horizontal: screenWidth * 0.05,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(15),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black12,
+                                blurRadius: 4,
+                                offset: Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: TextField(
+                            controller: passwordController,
+                            obscureText: true,
+                            decoration: InputDecoration(
+                              hintText: 'Password',
+                              border: InputBorder.none,
+                            ),
+                          ),
+                        ),
+                        SizedBox(height: screenHeight * 0.05),
+
+                        // Login Button
+                        SizedBox(
+                          width: double.infinity,
+                          height: screenHeight * 0.065,
+                          child: CustomButton(
+                            text: 'Login',
+                            color: Colors.lightBlue, // lighter, brighter button
+                            width: 200,
+                            onPressed: () {
+                              authController.login(
+                                userNameController.text,
+                                passwordController.text,
+                              );
+                            },
+                          ),
+                        ),
+                        SizedBox(height: screenHeight * 0.02),
+
+                        // Register Text
+                        TextButton(
+                          onPressed: () {
+                            Get.toNamed(AppRoutes.registerPage);
+                          },
+                          child: Text(
+                            "Don't have an account? Register",
+                            style: TextStyle(
+                              color:
+                                  Colors.blueGrey, // darker text for visibility
+                              fontSize: screenWidth * 0.04,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+      ),
+    );
+  }
+}
