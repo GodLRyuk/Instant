@@ -277,7 +277,7 @@ class _HomePageState extends State<HomePage> {
                       child: Text(
                         "View All",
                         style: TextStyle(
-                          fontSize: width * 0.035,
+                          fontSize: width * 0.040,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -366,6 +366,7 @@ class _HomePageState extends State<HomePage> {
                                         fontSize: width * 0.035,
                                       ),
                                     ),
+                                    SizedBox(height: height * 0.005),
 
                                     // 🔥 Add to Cart Button
                                     GestureDetector(
@@ -410,15 +411,32 @@ class _HomePageState extends State<HomePage> {
                 }),
               ),
 
-              SizedBox(height: height * 0.00),
+              SizedBox(height: height * 0.015),
               Padding(
                 padding: EdgeInsets.symmetric(horizontal: width * 0.05),
-                child: Text(
-                  'Recommended for you',
-                  style: TextStyle(
-                    fontSize: width * 0.045,
-                    fontWeight: FontWeight.bold,
-                  ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Recommended for you',
+                      style: TextStyle(
+                        fontSize: width * 0.045,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        Get.to(() => AllProductsPage());
+                      },
+                      child: Text(
+                        "View All",
+                        style: TextStyle(
+                          fontSize: width * 0.040,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
 
@@ -429,7 +447,7 @@ class _HomePageState extends State<HomePage> {
                 height: height * 0.23,
                 width: double.infinity,
                 child: Obx(() {
-                  if (productController.isLoading.value) {
+                  if (recommendedController.isLoading.value) {
                     return const Center(child: CircularProgressIndicator());
                   }
                   final recomended = recommendedController.recommendedList;
@@ -612,11 +630,16 @@ class _HomePageState extends State<HomePage> {
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    Text(
-                      'View All',
-                      style: TextStyle(
-                        fontSize: width * 0.035,
-                        fontWeight: FontWeight.bold,
+                    TextButton(
+                      onPressed: () {
+                        Get.to(() => AllProductsPage());
+                      },
+                      child: Text(
+                        "View All",
+                        style: TextStyle(
+                          fontSize: width * 0.040,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   ],
@@ -700,7 +723,7 @@ class _HomePageState extends State<HomePage> {
                                         fontSize: width * 0.035,
                                       ),
                                     ),
-
+                                    SizedBox(height: height * 0.005),
                                     // 🔥 Add to Cart Button
                                     GestureDetector(
                                       onTap: () {

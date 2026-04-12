@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:instant_delivery/pages/cart/cart_page.dart';
 import 'package:instant_delivery/pages/home/home_page.dart';
 import 'package:instant_delivery/pages/profile/profile_page.dart';
 
@@ -18,7 +19,7 @@ class _MainNavigationState extends State<MainNavigation> {
     
     ProfilePage(),
     HomePage(),
-    ProfilePage(),
+    CartPage(),
   ];
 
   @override

@@ -1,5 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:instant_delivery/config/app_config.dart';
+import 'package:instant_delivery/models/address_model.dart';
+import 'package:instant_delivery/models/cart_model.dart';
 import 'package:instant_delivery/models/category_model.dart';
 import 'package:instant_delivery/models/registration_model.dart';
 import 'package:instant_delivery/models/user_model.dart';
@@ -10,8 +12,9 @@ class ApiService {
   final Dio _dio = Dio(
     BaseOptions(
       baseUrl: AppConfig.baseUrl,
-      // connectTimeout: const Duration(seconds: 5),
-      // receiveTimeout: const Duration(seconds: 5),
+      validateStatus: (status) {
+        return true; // ✅ allow ALL responses (200, 400, 500, etc.)
+      },
     ),
   );
 
@@ -87,7 +90,7 @@ class ApiService {
     }
   }
 
-  Future<List<dynamic>> getProducts() async {
+  Future<List<dynamic>> getProducts({int page = 1}) async {
     final response = await _dio.get("/products/");
 
     if (response.statusCode == 200) {
@@ -120,14 +123,18 @@ class ApiService {
       throw Exception(e.response?.data['message'] ?? "Recommended API error");
     }
   }
+
   Future<List<dynamic>> getProductsByCategory(String categoryId) async {
     try {
-      final response = await _dio.get('/products/category/$categoryId/products/');
+      final response = await _dio.get(
+        '/products/category/$categoryId/products/',
+      );
       return response.data;
     } on DioException catch (e) {
       throw Exception(e.response?.data['message'] ?? "Category API error");
     }
   }
+
   Future<List<dynamic>> getAdvBanner() async {
     try {
       final response = await _dio.get('/masters/banners/');
@@ -136,12 +143,103 @@ class ApiService {
       throw Exception(e.response?.data['message'] ?? "Banner API error");
     }
   }
+
   Future<List<dynamic>> getTopBanner() async {
     try {
       final response = await _dio.get('/masters/advbanners/');
       return response.data;
     } on DioException catch (e) {
       throw Exception(e.response?.data['message'] ?? "Banner API error");
+    }
+  }
+
+  Future<dynamic> addToCart(int productId, int quantity) async {
+    try {
+      final response = await _dio.post(
+        '/cart/add/',
+        data: {"product_id": productId, "quantity": quantity},
+      );
+
+      return response;
+    } on DioException catch (e) {
+      // Access the response safely
+      final errorMessage = e;
+      print("Error: $errorMessage");
+
+      throw Exception(errorMessage);
+    }
+  }
+
+  Future<Cart> getCartItems() async {
+    try {
+      final response = await _dio.get('/cart/view/');
+      return Cart.fromJson(response.data);
+    } on DioException catch (e) {
+      throw Exception(e.response?.data['message'] ?? "Cart API error");
+    }
+  }
+
+  Future<void> removeCartItems(int productId) async {
+    final response = await _dio.post(
+      "/cart/remove/",
+      data: {"product_id": productId},
+    );
+
+    print("RES: ${response.data}");
+
+    if (response.statusCode == 200 && response.data['success'] == true) {
+      // ✅ Success case
+      return;
+    } else {
+      throw Exception(response.data['message'] ?? "Failed to delete item");
+    }
+  }
+
+  Future<dynamic> UpdateCartItems(int productId, int quantity) async {
+    final response = await _dio.post(
+      "/cart/update-cart-quantity/",
+      data: {"product_id": productId, "quantity": quantity},
+    );
+
+    return response;
+  }
+
+  Future<List<AddressModel>> getAddresses() async {
+    final response = await _dio.get(
+      "/addresses/list/",
+    );
+
+    if (response.statusCode == 200) {
+      final List data = response.data;
+
+      return data.map((e) => AddressModel.fromJson(e)).toList();
+    } else {
+      throw Exception("Failed to fetch addresses");
+    }
+  }
+  Future<void> addAddress({
+    required String fullAddress,
+    required String city,
+    required String state,
+    required String pincode,
+  }) async {
+    try {
+      final response = await _dio.post(
+        "/addresses/add/",
+        data: {
+          "full_address": fullAddress,
+          "city": city,
+          "state": state,
+          "pincode": pincode,
+        },
+      );
+
+      if (response.statusCode != 201 && response.statusCode != 200) {
+        throw Exception("Failed to add address");
+      }
+    } catch (e) {
+      print("API Add Address Error: $e");
+      rethrow;
     }
   }
 }

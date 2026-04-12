@@ -28,8 +28,8 @@ class LoginPage extends StatelessWidget {
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
-                      Color(0xFFE3F2FD), // Very light blue
-                      Color(0xFFBBDEFB), // Soft sky blue
+                      Color(0xFF53D288),
+                      Color.fromARGB(255, 136, 198, 65),
                     ],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
@@ -57,10 +57,11 @@ class LoginPage extends StatelessWidget {
                           width: double.infinity,
                           padding: EdgeInsets.symmetric(
                             horizontal: screenWidth * 0.05,
+                            vertical: screenHeight * 0.002,
                           ),
                           decoration: BoxDecoration(
                             color: Colors.white,
-                            borderRadius: BorderRadius.circular(15),
+                            borderRadius: BorderRadius.circular(10),
                             boxShadow: [
                               BoxShadow(
                                 color: Colors.black12,
@@ -84,10 +85,11 @@ class LoginPage extends StatelessWidget {
                           width: double.infinity,
                           padding: EdgeInsets.symmetric(
                             horizontal: screenWidth * 0.05,
+                            vertical: screenHeight * 0.002,
                           ),
                           decoration: BoxDecoration(
                             color: Colors.white,
-                            borderRadius: BorderRadius.circular(15),
+                            borderRadius: BorderRadius.circular(10),
                             boxShadow: [
                               BoxShadow(
                                 color: Colors.black12,
@@ -113,7 +115,7 @@ class LoginPage extends StatelessWidget {
                           height: screenHeight * 0.065,
                           child: CustomButton(
                             text: 'Login',
-                            color: Colors.lightBlue, // lighter, brighter button
+                            color: const Color.fromARGB(255, 42, 42, 42), // lighter, brighter button
                             width: 200,
                             onPressed: () {
                               authController.login(
@@ -134,7 +136,7 @@ class LoginPage extends StatelessWidget {
                             "Don't have an account? Register",
                             style: TextStyle(
                               color:
-                                  Colors.blueGrey, // darker text for visibility
+                                  Colors.white, // darker text for visibility
                               fontSize: screenWidth * 0.04,
                             ),
                           ),

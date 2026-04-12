@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../models/product_model.dart';
 import '../services/api_service.dart';
@@ -11,9 +12,15 @@ class ProductController extends GetxController {
   var bannerList = <ProductModel>[].obs;
   var topbannerList = <ProductModel>[].obs;
 
-
   var isLoading = false.obs;
+  var isMoreLoading = false.obs;
 
+  /// 🔥 Pagination
+  int currentPage = 1;
+  bool hasMore = true;
+
+  /// 🔥 Scroll Controller
+  final ScrollController scrollController = ScrollController();
   @override
   void onInit() {
     fetchProducts();
@@ -21,7 +28,16 @@ class ProductController extends GetxController {
     fetchRecommended();
     fetchBanners();
     fetchTopBanners();
+     scrollController.addListener(_scrollListener);
     super.onInit();
+  }
+  void _scrollListener() {
+    if (scrollController.position.pixels >=
+            scrollController.position.maxScrollExtent - 200 &&
+        !isMoreLoading.value &&
+        hasMore) {
+      loadMoreProducts();
+    }
   }
 
   Future<void> fetchProducts() async {
@@ -87,6 +103,7 @@ class ProductController extends GetxController {
       isLoading(false);
     }
   }
+
   Future<void> fetchNewArrivalsByCategory(String categoryID) async {
     isLoading(true);
     try {
@@ -98,6 +115,7 @@ class ProductController extends GetxController {
       isLoading(false);
     }
   }
+
   Future<void> fetchRecommendedByCategory(String categoryID) async {
     isLoading(true);
     try {
@@ -109,6 +127,7 @@ class ProductController extends GetxController {
       isLoading(false);
     }
   }
+
   Future<void> fetchBanners() async {
     try {
       isLoading(true);
@@ -124,6 +143,7 @@ class ProductController extends GetxController {
       isLoading(false);
     }
   }
+
   Future<void> fetchTopBanners() async {
     try {
       isLoading(true);
@@ -137,6 +157,28 @@ class ProductController extends GetxController {
       print("New Arrival Error: $e");
     } finally {
       isLoading(false);
+    }
+  }
+
+  Future<void> loadMoreProducts() async {
+    try {
+      isMoreLoading(true);
+
+      currentPage++;
+
+      final response = await _apiService.getProducts(page: currentPage);
+
+      if (response != null && response.isNotEmpty) {
+        productList.addAll(
+          response.map<ProductModel>((e) => ProductModel.fromJson(e)).toList(),
+        );
+      } else {
+        hasMore = false;
+      }
+    } catch (e) {
+      print("Load More Error: $e");
+    } finally {
+      isMoreLoading(false);
     }
   }
 }
