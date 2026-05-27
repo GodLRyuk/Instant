@@ -9,7 +9,7 @@ import 'package:instant_delivery/pages/product/product_details_page.dart';
 import 'package:instant_delivery/widgets/navigation/custom_app_bar.dart';
 
 class HomePage extends StatefulWidget {
-  HomePage({super.key});
+  const HomePage({super.key});
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -30,9 +30,16 @@ class _HomePageState extends State<HomePage> {
     ProductController(),
     tag: "rec",
   );
+  final ProductController searchControllerX = Get.put(
+    ProductController(),
+    tag: "search",
+  );
   late PageController _midBannerController;
   final ProductController bannerController = Get.put(ProductController());
   final ProductController topBannerController = Get.put(ProductController());
+  final TextEditingController searchController = TextEditingController();
+  final RxList searchResults = [].obs;
+  final RxBool showSearchBox = false.obs;
   int _currentPage = 0;
   Timer? _timer;
 
@@ -110,49 +117,70 @@ class _HomePageState extends State<HomePage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               SizedBox(height: height * 0.015),
-              Container(
-                margin: EdgeInsets.symmetric(horizontal: width * 0.04),
-                padding: EdgeInsets.symmetric(horizontal: width * 0.04),
-                height: height * 0.06,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [Colors.white, Color(0xfff5f5f5)],
-                  ),
-                  borderRadius: BorderRadius.circular(15),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.08),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
+              Stack(
+                children: [
+                  Container(
+                    margin: EdgeInsets.symmetric(horizontal: width * 0.04),
+                    padding: EdgeInsets.symmetric(horizontal: width * 0.04),
+                    height: height * 0.06,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(15),
                     ),
-                  ],
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: EdgeInsets.all(width * 0.015),
-                      decoration: BoxDecoration(
-                        color: Colors.orange.withOpacity(0.1),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(Icons.search, color: Colors.orange),
-                    ),
-                    SizedBox(width: width * 0.03),
-                    Expanded(
-                      child: TextField(
-                        decoration: InputDecoration(
-                          hintText: "Search products...",
-                          hintStyle: TextStyle(
-                            color: Colors.grey.shade500,
-                            fontSize: width * 0.035,
+                    child: Row(
+                      children: [
+                        SizedBox(width: width * 0.03),
+
+                        Expanded(
+                          child: Padding(
+                            padding: const EdgeInsets.only(top: 8.0),
+                            child: TextField(
+                              controller: searchController,
+                              textInputAction: TextInputAction.search,
+
+                              // 👇 Keep enter key search
+                              onSubmitted: (value) async {
+                                await searchControllerX.filterBySearch(value);
+
+                                Get.to(
+                                  () => AllProductsPage(),
+                                  arguments: {"isSearch": true},
+                                );
+                              },
+
+                              decoration: InputDecoration(
+                                hintText: "Search products...",
+                                border: InputBorder.none,
+
+                                // 👇 ADD THIS (right side search icon)
+                                suffixIcon: IconButton(
+                                  icon: const Icon(
+                                    Icons.search,
+                                    color: Colors.orange,
+                                  ),
+                                  onPressed: () async {
+                                    final value = searchController.text.trim();
+
+                                    if (value.isNotEmpty) {
+                                      await searchControllerX.filterBySearch(
+                                        value,
+                                      );
+
+                                      Get.to(
+                                        () => AllProductsPage(),
+                                        arguments: {"isSearch": true},
+                                      );
+                                    }
+                                  },
+                                ),
+                              ),
+                            ),
                           ),
-                          border: InputBorder.none,
                         ),
-                      ),
+                      ],
                     ),
-                    Icon(Icons.mic, color: Colors.grey.shade400),
-                  ],
-                ),
+                  ),
+                ],
               ),
               SizedBox(height: height * 0.01),
 
@@ -450,8 +478,6 @@ class _HomePageState extends State<HomePage> {
                   if (recommendedController.isLoading.value) {
                     return const Center(child: CircularProgressIndicator());
                   }
-                  final recomended = recommendedController.recommendedList;
-
                   return ListView.builder(
                     scrollDirection: Axis.horizontal,
                     itemCount: recommendedController.recommendedList.length,
@@ -570,7 +596,7 @@ class _HomePageState extends State<HomePage> {
                 }
 
                 return SizedBox(
-                  height: height * 0.18,
+                  height: height * 0.20,
                   child: PageView.builder(
                     controller: _midBannerController,
                     itemCount: bannerController.bannerList.length,
@@ -773,5 +799,19 @@ class _HomePageState extends State<HomePage> {
         ),
       ),
     );
+  }
+
+  void onSearchChanged(String value) async {
+    if (value.isEmpty) {
+      searchResults.clear();
+      showSearchBox.value = false;
+      return;
+    }
+
+    showSearchBox.value = true;
+
+    await searchControllerX.filterBySearch(value);
+
+    searchResults.value = List.from(searchControllerX.productList);
   }
 }

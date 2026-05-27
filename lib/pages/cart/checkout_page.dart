@@ -364,7 +364,6 @@ class _CheckoutPageState extends State<CheckoutPage> {
                           Get.snackbar("Error", "Please select address");
                           return;
                         }
-
                         Get.to(
                           () => PaymentPage(
                             totalAmount: widget.totalAmount,
@@ -452,6 +451,8 @@ class _CheckoutPageState extends State<CheckoutPage> {
   /// 🔥 ADD ADDRESS BOTTOM SHEET
   void _showAddAddressSheet(BuildContext context) {
     final TextEditingController fullAddressCtrl = TextEditingController();
+    final TextEditingController name = TextEditingController();
+    final TextEditingController phone = TextEditingController();
     final TextEditingController cityCtrl = TextEditingController();
     final TextEditingController stateCtrl = TextEditingController();
     final TextEditingController pincodeCtrl = TextEditingController();
@@ -480,6 +481,8 @@ class _CheckoutPageState extends State<CheckoutPage> {
                   showLocationConfirm(fullAddressCtrl);
                 },
               ),
+              _inputField("Name", name),
+              _inputField("Phone", phone),
               _inputField("City", cityCtrl),
               _inputField("State", stateCtrl),
               _inputField("Pincode", pincodeCtrl),

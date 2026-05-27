@@ -19,18 +19,21 @@ class ProductDetailsPage extends StatefulWidget {
 class _ProductDetailsPageState extends State<ProductDetailsPage> {
   final CartController cartController = Get.put(CartController());
   final ScrollController _scrollController = ScrollController();
+  late ProductController productController;
 
   late ProductController recommendedController;
   late ProductController newArrivalController;
 
   RxInt quantity = 1.obs;
-  late Rx<dynamic> currentProduct;
-
+  Rx<dynamic> currentProduct = Rx(null);
+  final ProductController controller = Get.find();
+  RxDouble averageRating = 0.0.obs;
+  RxInt reviewCount = 0.obs;
   @override
   void initState() {
     super.initState();
-
-    currentProduct = Rx<dynamic>(widget.product);
+    currentProduct.value = widget.product;
+    controller.loadProductReviews(widget.product.id);
 
     /// Recommended
     if (Get.isRegistered<ProductController>(tag: "rec")) {
@@ -48,16 +51,17 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
       newArrivalController.fetchNewArrivals();
     }
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _scrollController.jumpTo(0);
-    });
+    _scrollController.animateTo(
+      0,
+      duration: const Duration(milliseconds: 400),
+      curve: Curves.easeInOut,
+    );
   }
 
   bool isInCart(int productId) {
     return cartController.cartItems.any((item) => item.product_id == productId);
   }
 
-  /// 🔥 Helper: Show full-width loader for 3 seconds
   Future<void> showFullWidthLoader(dynamic product) async {
     showDialog(
       context: context,
@@ -86,6 +90,10 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
     Navigator.of(context).pop();
 
     // Update main product
+    currentProduct.value = null;
+
+    await Future.delayed(const Duration(milliseconds: 100));
+
     currentProduct.value = product;
     quantity.value = 1;
 
@@ -107,6 +115,10 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
       ),
       backgroundColor: Colors.grey[100],
       body: Obx(() {
+        if (currentProduct.value == null) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
         final product = currentProduct.value;
 
         return AnimatedSwitcher(
@@ -148,14 +160,6 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                 color: Colors.white,
                 child: Image.network(product.image, fit: BoxFit.contain),
               ),
-              Positioned(
-                top: 40,
-                right: 15,
-                child: CircleAvatar(
-                  backgroundColor: Colors.white,
-                  child: Icon(Icons.favorite_border),
-                ),
-              ),
             ],
           ),
 
@@ -180,13 +184,17 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                   ),
                 ),
                 const SizedBox(height: 6),
-                Row(
-                  children: const [
-                    Icon(Icons.star, color: Colors.orange, size: 18),
-                    SizedBox(width: 4),
-                    Text("4.5 (120 reviews)"),
-                  ],
-                ),
+                Obx(() {
+                  return Row(
+                    children: [
+                      const Icon(Icons.star, color: Colors.orange, size: 18),
+                      const SizedBox(width: 4),
+                      Text(
+                        "${controller.averageRating.value.toStringAsFixed(1)} (${controller.reviewCount.value} reviews)",
+                      ),
+                    ],
+                  );
+                }),
                 const SizedBox(height: 10),
 
                 /// PRICE
@@ -275,7 +283,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                 ),
                 SizedBox(height: 8),
                 Text(
-                  widget.product.description ?? "No description available",
+                  product.description ?? "No description available",
                   style: TextStyle(color: Colors.grey[700]),
                 ),
               ],
@@ -381,6 +389,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                               product.discounted_price * quantity.value,
                           items: [
                             {
+                              "product": product.id,
                               "name": product.name,
                               "price": product.discounted_price,
                               "quantity": quantity.value,
@@ -413,6 +422,11 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
               ],
             ),
           ),
+
+          SizedBox(height: height * 0.02),
+          SizedBox(height: height * 0.015),
+
+          _buildReviewsSection(product.id), // 🔥 ADD THIS
 
           SizedBox(height: height * 0.02),
 
@@ -471,10 +485,12 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
         SizedBox(
           height: height * 0.28,
           child: Obx(() {
-            if (controller.isLoading.value)
+            if (controller.isLoading.value) {
               return const Center(child: CircularProgressIndicator());
-            if (list.isEmpty)
+            }
+            if (list.isEmpty) {
               return const Center(child: Text("No products found"));
+            }
 
             return ListView.builder(
               scrollDirection: Axis.horizontal,
@@ -482,7 +498,21 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
               itemBuilder: (context, index) {
                 final item = list[index];
                 return GestureDetector(
-                  onTap: () => showFullWidthLoader(item), // 🔥 full-width wait
+                  onTap: () async {
+                    currentProduct.value = null;
+
+                    await this.controller.loadProductReviews(item.id);
+
+                    currentProduct.value = item;
+
+                    quantity.value = 1;
+
+                    _scrollController.animateTo(
+                      0,
+                      duration: const Duration(milliseconds: 400),
+                      curve: Curves.easeInOut,
+                    );
+                  },
                   child: Container(
                     width: width * 0.42,
                     margin: EdgeInsets.only(
@@ -582,5 +612,124 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
         ),
       ],
     );
+  }
+
+  Widget _buildReviewsSection(dynamic product) {
+    return Obx(() {
+      final reviews = controller.reviews;
+      return Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(15),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            /// TITLE
+            Text(
+              "Reviews (${reviews.length})",
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            ),
+
+            const SizedBox(height: 10),
+
+            /// AVERAGE RATING (from product)
+            Row(
+              children: [
+                const Icon(Icons.star, color: Colors.orange, size: 20),
+                const SizedBox(width: 5),
+                Text(
+                  "${controller.averageRating.value.toStringAsFixed(1)} / 5",
+                  style: const TextStyle(fontWeight: FontWeight.w500),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 15),
+
+            /// REVIEWS LIST
+            reviews.isEmpty
+                ? const Text(
+                    "No reviews yet",
+                    style: TextStyle(color: Colors.grey),
+                  )
+                : ListView.separated(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: reviews.length,
+                    separatorBuilder: (context, index) =>
+                        const SizedBox(height: 10),
+                    itemBuilder: (context, index) {
+                      final r = reviews[index];
+
+                      return Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.grey[100],
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            /// AVATAR
+                            CircleAvatar(
+                              backgroundColor: Colors.green,
+                              child: Text(
+                                (r['user_name'] ?? "U")[0].toUpperCase(),
+                                style: const TextStyle(color: Colors.white),
+                              ),
+                            ),
+
+                            const SizedBox(width: 10),
+
+                            /// CONTENT
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  /// USER NAME
+                                  Text(
+                                    r['user_name'] ?? "Unknown",
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+
+                                  const SizedBox(height: 4),
+
+                                  /// COMMENT
+                                  Text(
+                                    r['comment'] ?? "",
+                                    style: const TextStyle(
+                                      color: Colors.black87,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+
+                            /// RATING
+                            Row(
+                              children: [
+                                const Icon(
+                                  Icons.star,
+                                  color: Colors.orange,
+                                  size: 16,
+                                ),
+                                const SizedBox(width: 3),
+                                Text("${r['rating']}"),
+                              ],
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+          ],
+        ),
+      );
+    });
   }
 }

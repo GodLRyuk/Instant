@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:instant_delivery/models/registration_model.dart';
+import 'package:instant_delivery/pages/auth/otp_page.dart';
 import 'package:instant_delivery/services/api_service.dart';
 import 'package:instant_delivery/widgets/buttons/custom_button.dart';
 
@@ -19,7 +20,7 @@ class _RegisterPageState extends State<RegisterPage> {
   final TextEditingController addressController = TextEditingController();
 
   String selectedRole = 'CUSTOMER';
-
+  bool isLoading = false;
   @override
   void dispose() {
     usernameController.dispose();
@@ -40,12 +41,9 @@ class _RegisterPageState extends State<RegisterPage> {
         height: double.infinity,
         decoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: [
-              Color(0xFFE3F2FD), // Very light blue
-              Color(0xFFBBDEFB), // Soft sky blue
-            ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
+            colors: [Color(0xFF53D288), Color.fromARGB(255, 136, 198, 65)],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
           ),
         ),
         child: SafeArea(
@@ -58,7 +56,7 @@ class _RegisterPageState extends State<RegisterPage> {
                 Text(
                   "Registration",
                   style: TextStyle(
-                    color: Colors.blueGrey,
+                    color: const Color.fromARGB(255, 255, 255, 255),
                     fontSize: 28,
                     fontWeight: FontWeight.bold,
                   ),
@@ -78,7 +76,13 @@ class _RegisterPageState extends State<RegisterPage> {
                 const SizedBox(height: 15),
                 CustomButton(
                   text: "Register",
+                  color: Colors.black,
+                  isLoading: isLoading, // ✅ important
                   onPressed: () async {
+                    setState(() {
+                      isLoading = true;
+                    });
+
                     try {
                       final model = RegisterModel(
                         username: usernameController.text.trim(),
@@ -91,16 +95,26 @@ class _RegisterPageState extends State<RegisterPage> {
 
                       final result = await _apiService.register(model);
 
-                      ScaffoldMessenger.of(
-                        context,
-                      ).showSnackBar(SnackBar(content: Text(result.message)));
+                      // if (!context.mounted) return;
 
-                      // 👉 Navigate to login after success
-                      Navigator.pop(context);
-                    } catch (e) {
-                      ScaffoldMessenger.of(
+                      Navigator.push(
                         context,
-                      ).showSnackBar(SnackBar(content: Text(e.toString())));
+                        MaterialPageRoute(
+                          builder: (_) => OtpPage(email: result.email),
+                        ),
+                      );
+                    } catch (e) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            e.toString().replaceAll("Exception: ", ""),
+                          ),
+                        ),
+                      );
+                    } finally {
+                      setState(() {
+                        isLoading = false;
+                      });
                     }
                   },
                 ),
@@ -113,7 +127,7 @@ class _RegisterPageState extends State<RegisterPage> {
                     Text(
                       "Already have an account? ",
                       style: TextStyle(
-                        color: Colors.blueGrey, // darker text for visibility
+                        color: const Color.fromARGB(255, 255, 255, 255), // darker text for visibility
                         fontSize: screenWidth * 0.04,
                       ),
                     ),
@@ -124,7 +138,7 @@ class _RegisterPageState extends State<RegisterPage> {
                       child: Text(
                         "Login",
                         style: TextStyle(
-                          color: Colors.blueGrey, // darker text for visibility
+                          color: const Color.fromARGB(255, 0, 121, 181), // darker text for visibility
                           fontSize: screenWidth * 0.04,
                         ),
                       ),

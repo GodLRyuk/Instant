@@ -28,12 +28,17 @@ class RegisterModel {
 }
 class RegisterResponseModel {
   final String message;
+  final String email;
 
-  RegisterResponseModel({required this.message});
+  RegisterResponseModel({
+    required this.message,
+    required this.email,
+  });
 
   factory RegisterResponseModel.fromJson(Map<String, dynamic> json) {
     return RegisterResponseModel(
-      message: json['message'] ?? "Registration successful",
+      message: json['message'],
+      email: json['email']
     );
   }
 }

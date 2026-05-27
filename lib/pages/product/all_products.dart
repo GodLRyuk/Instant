@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:instant_delivery/controllers/category_controller.dart';
 import 'package:instant_delivery/controllers/product_controller.dart';
+import 'package:instant_delivery/models/product_model.dart';
 import 'package:instant_delivery/pages/product/product_details_page.dart';
 import 'package:instant_delivery/widgets/navigation/custom_app_bar.dart';
 
@@ -13,10 +14,40 @@ class AllProductsPage extends StatefulWidget {
 }
 
 class _AllProductsPageState extends State<AllProductsPage> {
-  final ProductController productController = Get.find<ProductController>();
+  late ProductController productController;
+  bool isSearch = false;
+
   final CategoryController categoryController = Get.put(CategoryController());
+  final TextEditingController searchController = TextEditingController();
 
   var selectedCategoryId = "all".obs;
+
+  /// ✅ STORE SEARCH RESULTS LOCALLY
+  List<ProductModel> searchResults = [];
+
+  @override
+  void initState() {
+    super.initState();
+
+    final args = Get.arguments;
+
+    if (args != null && args['isSearch'] == true) {
+      isSearch = true;
+      productController = Get.find<ProductController>(tag: "search");
+    } else {
+      productController = Get.find<ProductController>(tag: "all");
+      productController.fetchProducts();
+    }
+
+    /// 🔥 CRITICAL FIX: delay any Rx update safely
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (isSearch && Get.arguments != null) {
+        final all = Get.arguments['results'];
+
+        productController.productList.assignAll(all);
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -35,6 +66,11 @@ class _AllProductsPageState extends State<AllProductsPage> {
           return const Center(child: CircularProgressIndicator());
         }
 
+        /// ✅ EMPTY STATE
+        // if (productController.productList.isEmpty) {
+        //   return const Center(child: Text("No products found"));
+        // }
+
         return CustomScrollView(
           slivers: [
             /// 🔥 HEADER
@@ -45,19 +81,92 @@ class _AllProductsPageState extends State<AllProductsPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const SizedBox(height: 10),
-                    Text(
-                      "Explore",
-                      style: TextStyle(
-                        fontSize: width * 0.08,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    Text(
-                      "Collections",
-                      style: TextStyle(
-                        fontSize: width * 0.08,
-                        fontWeight: FontWeight.bold,
-                      ),
+                    Stack(
+                      children: [
+                        Container(
+                          margin: EdgeInsets.symmetric(horizontal: width * 0.0),
+                          padding: EdgeInsets.symmetric(
+                            horizontal: width * 0.04,
+                          ),
+                          height: height * 0.06,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(15),
+                          ),
+                          child: Row(
+                            children: [
+                              SizedBox(width: width * 0.03),
+
+                              Expanded(
+                                child: Padding(
+                                  padding: const EdgeInsets.only(top: 8.0),
+                                  child: TextField(
+                                    controller: searchController,
+                                    textInputAction: TextInputAction.search,
+
+                                    // 👇 Keep enter key search
+                                    onSubmitted: (value) async {
+                                      final controller =
+                                          Get.find<ProductController>(
+                                            tag: "search",
+                                          );
+
+                                      await controller.filterBySearch(value);
+
+                                      Get.to(
+                                        () => AllProductsPage(),
+                                        arguments: {
+                                          "isSearch": true,
+                                          "results": controller.productList
+                                              .toList(),
+                                        },
+                                      );
+                                    },
+
+                                    decoration: InputDecoration(
+                                      hintText: "Search products...",
+                                      border: InputBorder.none,
+
+                                      // 👇 ADD THIS (right side search icon)
+                                      suffixIcon: IconButton(
+                                        icon: const Icon(
+                                          Icons.search,
+                                          color: Colors.orange,
+                                        ),
+                                        onPressed: () async {
+                                          final value = searchController.text
+                                              .trim();
+
+                                          if (value.isNotEmpty) {
+                                            final controller =
+                                                Get.find<ProductController>(
+                                                  tag: "search",
+                                                );
+
+                                            await controller.filterBySearch(
+                                              value,
+                                            );
+
+                                            Get.to(
+                                              () => AllProductsPage(),
+                                              arguments: {
+                                                "isSearch": true,
+                                                "results": controller
+                                                    .productList
+                                                    .toList(),
+                                              },
+                                            );
+                                          }
+                                        },
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
                     SizedBox(height: height * 0.02),
                   ],
@@ -65,7 +174,7 @@ class _AllProductsPageState extends State<AllProductsPage> {
               ),
             ),
 
-            /// 🔘 CATEGORY CHIPS (SCROLLABLE)
+            /// 🔘 CATEGORY CHIPS
             SliverToBoxAdapter(
               child: Padding(
                 padding: EdgeInsets.symmetric(horizontal: width * 0.05),
@@ -91,12 +200,34 @@ class _AllProductsPageState extends State<AllProductsPage> {
                           onTap: () async {
                             selectedCategoryId.value = category['id']!;
 
-                            if (category['id'] == "all") {
-                              await productController.fetchProducts();
+                            if (isSearch) {
+                              /// 🔍 FILTER SEARCH RESULTS
+                              WidgetsBinding.instance.addPostFrameCallback((_) {
+                                final all = Get.arguments?['results'] ?? [];
+
+                                if (category['id'] == "all") {
+                                  productController.productList.assignAll(all);
+                                } else {
+                                  productController.productList.assignAll(
+                                    all
+                                        .where(
+                                          (p) =>
+                                              p.category.toString() ==
+                                              category['id'],
+                                        )
+                                        .toList(),
+                                  );
+                                }
+                              });
                             } else {
-                              await productController.fetchProductsByCategory(
-                                category['id']!,
-                              );
+                              /// 🌐 CALL API FOR CATEGORY
+                              if (category['id'] == "all") {
+                                await productController.fetchProducts();
+                              } else {
+                                await productController.fetchProductsByCategory(
+                                  category['id']!,
+                                );
+                              }
                             }
                           },
                         );
@@ -109,131 +240,125 @@ class _AllProductsPageState extends State<AllProductsPage> {
 
             const SliverToBoxAdapter(child: SizedBox(height: 15)),
 
-            /// 🛒 PRODUCT GRID (FIXED SLIVER GRID)
+            /// 🛒 PRODUCT GRID
             SliverPadding(
-              padding: EdgeInsets.symmetric(horizontal: width * 0.05)
-                  .copyWith(bottom: 120),
-              sliver: SliverGrid(
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) {
-                    final product =
-                        productController.productList[index];
+              padding: EdgeInsets.symmetric(
+                horizontal: width * 0.02,
+              ).copyWith(bottom: 120),
+              sliver:
+                  /// 🛒 PRODUCT LIST (AMAZON STYLE)
+                  SliverList(
+                    delegate: SliverChildBuilderDelegate((context, index) {
+                      final product = productController.productList[index];
 
-                    return Transform.translate(
-                      offset: Offset(0, index.isEven ? 50 : 5),
-                      child: GestureDetector(
+                      return GestureDetector(
                         onTap: () {
-                          Get.to(() =>
-                              ProductDetailsPage(product: product));
+                          Get.to(() => ProductDetailsPage(product: product));
                         },
                         child: Container(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              colors: [
-                                Color(0xFF53D288),
-                                Color.fromARGB(255, 136, 198, 65),
-                              ],
-                              begin: Alignment.topCenter,
-                              end: Alignment.bottomCenter,
-                            ),
-                            borderRadius: BorderRadius.circular(20),
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(16),
                             boxShadow: [
                               BoxShadow(
                                 color: Colors.grey.shade200,
-                                blurRadius: 12,
-                                offset: const Offset(0, 6),
+                                blurRadius: 10,
+                                offset: const Offset(0, 5),
                               ),
                             ],
                           ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                          child: Row(
                             children: [
-                              /// 🖼 IMAGE
-                              Expanded(
-                                flex: 7,
-                                child: Container(
-                                  margin: const EdgeInsets.all(10),
-                                  padding: const EdgeInsets.all(12),
-                                  decoration: BoxDecoration(
-                                    color: Colors.grey.shade100,
-                                    borderRadius: BorderRadius.circular(18),
-                                  ),
-                                  child: Center(
-                                    child: Image.network(
-                                      product.image,
-                                      fit: BoxFit.contain,
-                                    ),
-                                  ),
+                              /// 🖼 LEFT IMAGE
+                              Container(
+                                width: width * 0.40,
+                                height: height * 0.20,
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: Colors.grey.shade100,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Image.network(
+                                  product.image,
+                                  fit: BoxFit.contain,
                                 ),
                               ),
 
-                              /// 📝 DETAILS
+                              const SizedBox(width: 12),
+
+                              /// 📄 RIGHT DETAILS
                               Expanded(
-                                flex: 3,
-                                child: Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 12),
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.center,
-                                    children: [
-                                      Row(
-                                        children: [
-                                          Expanded(
-                                            child: Text(
-                                              product.name,
-                                              maxLines: 1,
-                                              overflow:
-                                                  TextOverflow.ellipsis,
-                                              style: const TextStyle(
-                                                fontWeight: FontWeight.w600,
-                                                fontSize: 14,
-                                                color: Colors.white,
-                                              ),
-                                            ),
-                                          ),
-                                          Text(
-                                            "₹${product.price.toStringAsFixed(0)}",
-                                            style: const TextStyle(
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 14,
-                                              color: Colors.white,
-                                            ),
-                                          ),
-                                        ],
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    /// NAME
+                                    Text(
+                                      product.name,
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 15,
                                       ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        "${product.unit_size} ${product.unit_name}",
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 12,
+                                    ),
+                                    const SizedBox(height: 6),
+
+                                    /// UNIT
+                                    Text(
+                                      "${product.unit_size} ${product.unit_name}",
+                                      style: TextStyle(
+                                        color: Colors.grey.shade600,
+                                        fontSize: 13,
+                                      ),
+                                    ),
+
+                                    const SizedBox(height: 10),
+
+                                    /// PRICE + BUTTON ROW
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Text(
+                                          "Price: ₹ ${product.price.toStringAsFixed(0)}",
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 16,
+                                            color: Color(0xFF53D288),
+                                          ),
                                         ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 6),
+                                    Text(
+                                      "Discounted Price: ${product.discounted_price}",
+                                      style: TextStyle(
+                                        color: Colors.grey.shade600,
+                                        fontSize: 13,
                                       ),
-                                    ],
-                                  ),
+                                    ),
+                                    const SizedBox(height: 6),
+                                    Text(
+                                      "Available Qty: ${product.stock}",
+                                      style: TextStyle(
+                                        color: product.stock! <= 10
+                                            ? Colors.red
+                                            : Colors.grey.shade600,
+                                        fontSize: 15,
+                                        fontWeight: FontWeight(500),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
                             ],
                           ),
                         ),
-                      ),
-                    );
-                  },
-                  childCount:
-                      productController.productList.length,
-                ),
-
-                gridDelegate:
-                    const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  crossAxisSpacing: 15,
-                  mainAxisSpacing: 15,
-                  childAspectRatio: 0.75,
-                ),
-              ),
+                      );
+                    }, childCount: productController.productList.length),
+                  ),
             ),
           ],
         );
@@ -241,6 +366,7 @@ class _AllProductsPageState extends State<AllProductsPage> {
     );
   }
 
+  /// 🔘 CHIP UI
   Widget buildChip({
     required String id,
     required String text,
@@ -251,18 +377,10 @@ class _AllProductsPageState extends State<AllProductsPage> {
       onTap: onTap,
       child: Container(
         margin: const EdgeInsets.only(right: 10),
-        padding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 10,
-        ),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         decoration: BoxDecoration(
           gradient: const LinearGradient(
-            colors: [
-              Color(0xFF53D288),
-              Color.fromARGB(255, 136, 198, 65),
-            ],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
+            colors: [Color(0xFF53D288), Color.fromARGB(255, 136, 198, 65)],
           ),
           borderRadius: BorderRadius.circular(25),
         ),

@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:dio/dio.dart';
 import 'package:instant_delivery/config/app_config.dart';
 import 'package:instant_delivery/models/address_model.dart';
@@ -32,13 +34,15 @@ class ApiService {
         final prefs = await SharedPreferences.getInstance();
 
         // ✅ Store tokens
-        await prefs.setString('access_token', data['access']);
-        await prefs.setString('refresh_token', data['refresh']);
+        await prefs.setString('access_token', data['access'] ?? '');
+        await prefs.setString('refresh_token', data['refresh'] ?? '');
 
-        // ✅ Store user info
-        await prefs.setInt('user_id', data['user_id']);
-        await prefs.setString('email', data['email']);
-        await prefs.setString('role', data['role']);
+        // ✅ User info
+        await prefs.setInt('user_id', data['user_id'] ?? 0);
+        await prefs.setString('email', data['email'] ?? '');
+        await prefs.setString('phone', data['phone'] ?? '');
+        await prefs.setString('role', data['role'] ?? '');
+        await prefs.setString('profile_image', data['profile_image'] ?? '');
 
         return data;
       } else {
@@ -68,10 +72,86 @@ class ApiService {
         data: model.toJson(),
       );
 
-      return RegisterResponseModel.fromJson(response.data);
-    } catch (e) {
-      throw Exception("Registration failed: $e");
+      if (response.statusCode == 201) {
+        return RegisterResponseModel.fromJson(response.data);
+      } else {
+        throw Exception(response.data['error'] ?? 'Registration failed');
+      }
+    } on DioException catch (e) {
+      throw Exception(
+        e.response?.data['error'] ?? e.message ?? 'Network error',
+      );
     }
+  }
+
+  Future<void> updateProfile(Map<String, dynamic> data, {File? image}) async {
+    final formData = FormData.fromMap(data);
+
+    if (image != null) {
+      formData.files.add(
+        MapEntry("profile_image", await MultipartFile.fromFile(image.path)),
+      );
+    }
+
+    final response = await _dio.put(
+      '/accounts/update-profile/',
+      data: formData,
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception("Failed to update profile");
+    }
+  }
+
+  Future<Map<String, dynamic>> verifyOtp({
+    required String type,
+    String? email,
+    required String otp,
+  }) async {
+    final Map<String, dynamic> data = {"type": type, "otp": otp};
+
+    // ✅ Only send email if it is required
+    if (type == "register" && email != null) {
+      data["email"] = email;
+    }
+
+    final response = await _dio.post('/accounts/verify-otp/', data: data);
+
+    if (response.data is Map && response.data["error"] != null) {
+      throw Exception(
+        "${response.data["error"]}"
+        "${response.data["attempts_left"] != null ? ' (Attempts left: ${response.data["attempts_left"]})' : ''}",
+      );
+    }
+
+    return response.data;
+  }
+
+  Future<Map<String, dynamic>> verifyEmailChangeOtp({
+    required String otp,
+  }) async {
+    final response = await _dio.post(
+      '/accounts/verify-email-change-otp/',
+      data: {"otp": otp},
+    );
+    return response.data;
+  }
+
+  Future<Map<String, dynamic>> requestEmailOtp(String email) async {
+    final response = await _dio.post(
+      '/accounts/request-email-otp/',
+      data: {"email": email},
+    );
+
+    return response.data;
+  }
+
+  Future<Map<String, dynamic>> resendOtp(int userId) async {
+    final response = await _dio.post(
+      '/accounts/resend-otp/',
+      data: {"user_id": userId},
+    );
+    return response.data;
   }
 
   Future<List<CategoryModel>> getCategory() async {
@@ -205,9 +285,7 @@ class ApiService {
   }
 
   Future<List<AddressModel>> getAddresses() async {
-    final response = await _dio.get(
-      "/addresses/list/",
-    );
+    final response = await _dio.get("/addresses/list/");
 
     if (response.statusCode == 200) {
       final List data = response.data;
@@ -217,6 +295,7 @@ class ApiService {
       throw Exception("Failed to fetch addresses");
     }
   }
+
   Future<void> addAddress({
     required String fullAddress,
     required String city,
@@ -242,4 +321,67 @@ class ApiService {
       rethrow;
     }
   }
+
+  Future<Response<dynamic>> getProfile() async {
+    try {
+      final response = await _dio.get("/accounts/profile/");
+      return response;
+    } catch (e) {
+      print("API Profile Error: $e");
+      rethrow;
+    }
+  }
+
+  Future<List<dynamic>> getProductBysearch(String product) async {
+    final response = await _dio.get("/products/?search=$product");
+
+    if (response.statusCode == 200) {
+      return response.data;
+    } else {
+      throw Exception("Failed to load products");
+    }
+  }
+
+  Future<Map<String, dynamic>> createOrder({
+    required List items,
+    required dynamic address_id,
+    required double totalAmount,
+    required String paymentMethod,
+    required String paymentStatus,
+  }) async {
+    final response = await _dio.post(
+      "/orders/create/",
+      data: {
+        "items": items,
+        "address_id": address_id,
+        "total_amount": totalAmount,
+        "payment_method": paymentMethod,
+        "payment_status": paymentStatus,
+      },
+    );
+    return {"data": response.data, "statusCode": response.statusCode};
+  }
+
+  Future verifyPayment(Map<String, dynamic> data) async {
+    final response = await _dio.post("/verify-payment/", data: data);
+
+    return response.data;
+  }
+  Future<List<dynamic>> getOrders() async {
+    try {
+      final response = await _dio.get("/orders/");
+      return response.data;
+    } catch (e) {
+      throw Exception("Failed to fetch orders: $e");
+    }
+  }
+  Future<Map<String, dynamic>> getOrderDetail(int orderId) async {
+    
+    final response = await _dio.get("/orders/$orderId/");
+    return response.data;
+  }
+  Future<dynamic> getReviews(int productId) async {
+  final response = await _dio.get("/products/$productId/reviews/");
+  return response.data; // already JSON
+}
 }

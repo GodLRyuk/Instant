@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:instant_delivery/controllers/payment_controller.dart';
 import 'package:instant_delivery/widgets/navigation/custom_app_bar.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -21,7 +22,7 @@ class PaymentPage extends StatefulWidget {
 
 class _PaymentPageState extends State<PaymentPage> {
   String selectedPayment = "GPay";
-
+  final PaymentController paymentController = Get.put(PaymentController());
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
@@ -37,7 +38,7 @@ class _PaymentPageState extends State<PaymentPage> {
       body: Column(
         children: [
           /// 🧾 ORDER SUMMARY (small preview)
-           Container(
+          Container(
             margin: const EdgeInsets.all(18),
             padding: EdgeInsets.all(width * 0.04),
             decoration: BoxDecoration(
@@ -58,6 +59,7 @@ class _PaymentPageState extends State<PaymentPage> {
               ],
             ),
           ),
+
           /// 💳 PAYMENT SECTION
           Container(
             margin: EdgeInsets.symmetric(horizontal: width * 0.04),
@@ -98,16 +100,12 @@ class _PaymentPageState extends State<PaymentPage> {
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
                 onPressed: () {
-                  if (selectedPayment == "COD") {
-                    placeOrderCOD();
-                  } else {
-                    openUpiApp(
-                      upiId: "sylmondal@ybl",
-                      name: "Instant Delivery",
-                      amount: widget.totalAmount.toString(),
-                      note: "Order Payment",
-                    );
-                  }
+                  paymentController.processPayment(
+                    items: widget.items,
+                    address: widget.address,
+                    totalAmount: widget.totalAmount,
+                    paymentMethod: selectedPayment,
+                  );
                 },
                 child: Text(
                   "Proceed to Pay",

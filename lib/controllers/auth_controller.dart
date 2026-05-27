@@ -1,5 +1,7 @@
 import 'package:get/get.dart';
+import 'package:instant_delivery/services/secure_storage.dart';
 import 'package:instant_delivery/widgets/navigation/bottom_navigation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../services/api_service.dart';
 
 class AuthController extends GetxController {
@@ -7,22 +9,27 @@ class AuthController extends GetxController {
   var isLoggedIn = false.obs;
 
   final ApiService _apiService = ApiService(); // ✅ inject the service
+  final SecureStorage _secureStorage = SecureStorage();
 
   Future<void> login(String email, String password) async {
     isLoading.value = true;
 
-    final result = await _apiService.login(email, password); // ✅ call the API
-
+    final result = await _apiService.login(email, password);
     isLoading.value = false;
-
     if (result.containsKey('error')) {
-      Get.snackbar('Login Failed', result['error'],
-          snackPosition: SnackPosition.BOTTOM);
-    } else {
-      isLoggedIn.value = true;
-      // Save token if returned
-      // GetStorage().write('token', result['token']);
-     Get.to(() => MainNavigation(initialIndex: 1)); // Profile tab
+      Get.snackbar(
+        'Login Failed',
+        result['error'],
+        snackPosition: SnackPosition.BOTTOM,
+      );
+      return;
     }
+    // Save login credentials (IMPORTANT)
+    await _secureStorage.write('saved_email', email);
+    await _secureStorage.write('saved_password', password);
+
+    isLoggedIn.value = true;
+
+    Get.to(() => MainNavigation(initialIndex: 1)); 
   }
 }

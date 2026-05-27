@@ -1,16 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:instant_delivery/route/app_routes.dart';
+import 'package:instant_delivery/services/biometric_service.dart';
+import 'package:instant_delivery/services/secure_storage.dart';
 import 'package:instant_delivery/widgets/buttons/custom_button.dart';
 import '../../controllers/auth_controller.dart';
 
-class LoginPage extends StatelessWidget {
+class LoginPage extends StatefulWidget {
+
+  LoginPage({super.key});
+
+  @override
+  State<LoginPage> createState() => _LoginPageState();
+}
+
+class _LoginPageState extends State<LoginPage> {
   final AuthController authController = Get.find<AuthController>();
 
   final TextEditingController userNameController = TextEditingController();
-  final TextEditingController passwordController = TextEditingController();
 
-  LoginPage({super.key});
+  final TextEditingController passwordController = TextEditingController();
 
   @override
   Widget build(BuildContext context) {
@@ -115,7 +124,12 @@ class LoginPage extends StatelessWidget {
                           height: screenHeight * 0.065,
                           child: CustomButton(
                             text: 'Login',
-                            color: const Color.fromARGB(255, 42, 42, 42), // lighter, brighter button
+                            color: const Color.fromARGB(
+                              255,
+                              42,
+                              42,
+                              42,
+                            ), // lighter, brighter button
                             width: 200,
                             onPressed: () {
                               authController.login(
@@ -135,11 +149,45 @@ class LoginPage extends StatelessWidget {
                           child: Text(
                             "Don't have an account? Register",
                             style: TextStyle(
-                              color:
-                                  Colors.white, // darker text for visibility
+                              color: Colors.white, // darker text for visibility
                               fontSize: screenWidth * 0.04,
                             ),
                           ),
+                        ),
+                        SizedBox(height: 20),
+
+                        IconButton(
+                          icon: const Icon(
+                            Icons.fingerprint,
+                            size: 50,
+                            color: Colors.white,
+                          ),
+                          onPressed: () async {
+                            final biometric = BiometricService();
+                            final isAuthenticated = await biometric
+                                .authenticate();
+
+                            if (!isAuthenticated) return;
+
+                            final secureStorage = SecureStorage();
+
+                            String? email = await secureStorage.read(
+                              'saved_email',
+                            );
+                            String? password = await secureStorage.read(
+                              'saved_password',
+                            );
+
+                            if (email != null && password != null) {
+                              authController.login(email, password);
+                            } else {
+                              Get.snackbar(
+                                "Error",
+                                "No saved credentials found",
+                                snackPosition: SnackPosition.BOTTOM,
+                              );
+                            }
+                          },
                         ),
                       ],
                     ),

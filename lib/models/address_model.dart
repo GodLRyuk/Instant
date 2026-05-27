@@ -17,12 +17,29 @@ class AddressModel {
 
   factory AddressModel.fromJson(Map<String, dynamic> json) {
     return AddressModel(
-      id: json['id'],
-      fullAddress: json['full_address'],
+      id: json['id'] ?? 0,
+      fullAddress: json['full_address'] ?? '',
       city: json['city'] ?? '',
       state: json['state'] ?? '',
       pincode: json['pincode'] ?? '',
       isDefault: json['is_default'] ?? false,
     );
+  }
+
+  /// 🔥 ADD THIS METHOD
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'full_address': fullAddress,
+      'city': city,
+      'state': state,
+      'pincode': pincode,
+      'is_default': isDefault,
+    };
+  }
+
+  @override
+  String toString() {
+    return 'AddressModel(id: $id, fullAddress: $fullAddress, city: $city, state: $state, pincode: $pincode, isDefault: $isDefault)';
   }
 }

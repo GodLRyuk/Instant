@@ -3,6 +3,7 @@ import 'package:get/get_core/src/get_main.dart';
 import 'package:get/get_navigation/src/extension_navigation.dart';
 import 'package:instant_delivery/pages/cart/cart_page.dart';
 import 'package:instant_delivery/pages/profile/profile_page.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   final String title;
@@ -37,37 +38,52 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
 
       // ✅ CONDITIONAL LEADING
       leading: showBackButton
-          ? IconButton(
-              icon: const Icon(Icons.arrow_back, color: Colors.white),
-              onPressed: () {
-                Get.back(); // 👈 go back
+    ? IconButton(
+        icon: const Icon(Icons.arrow_back, color: Colors.white),
+        onPressed: () {
+          Get.back();
+        },
+      )
+    : FutureBuilder<String?>(
+        future: _getProfileImage(),
+        builder: (context, snapshot) {
+          final imageUrl = snapshot.data;
+
+          return Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: GestureDetector(
+              onTap: () {
+                Get.to(() => const ProfilePage());
               },
-            )
-          : Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: GestureDetector(
-                onTap: () {
-                  Get.to(() => const ProfilePage());
-                },
-                child: Container(
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white, width: 2),
-                  ),
-                  child: ClipOval(
-                    child: Padding(
-                      padding: const EdgeInsets.all(1.0),
-                      child: Image.asset(
-                        'assets/images/profileImg.jpg',
-                        fit: BoxFit.fill,
-                        width: double.infinity,
-                        height: double.infinity,
-                      ),
-                    ),
-                  ),
+              child: Container(
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white, width: 2),
+                ),
+                child: ClipOval(
+                  child: imageUrl != null && imageUrl.isNotEmpty
+                      ? Image.network(
+                          imageUrl,
+                          fit: BoxFit.cover,
+                          width: 40,
+                          height: 40,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Image.asset(
+                              'assets/images/profileImg.jpg',
+                              fit: BoxFit.cover,
+                            );
+                          },
+                        )
+                      : Image.asset(
+                          'assets/images/profileImg.jpg',
+                          fit: BoxFit.cover,
+                        ),
                 ),
               ),
             ),
+          );
+        },
+      ),
 
       // ✅ GRADIENT
       flexibleSpace: Container(
@@ -100,4 +116,9 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
 
   @override
   Size get preferredSize => const Size.fromHeight(kToolbarHeight);
+
+  Future<String?> _getProfileImage() async {
+  final prefs = await SharedPreferences.getInstance();
+  return prefs.getString('profile_image');
+}
 }

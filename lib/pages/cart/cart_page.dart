@@ -27,7 +27,7 @@ class _CartPageState extends State<CartPage> {
       appBar: const CustomAppBar(
         title: "My Cart",
         isTransparent: false,
-        showBackButton: true,
+        showBackButton: false,
       ),
       body: Obx(() {
         if (cartController.isUpdating.value) {
