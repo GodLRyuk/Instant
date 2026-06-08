@@ -245,14 +245,27 @@ class _HomePageState extends State<HomePage> {
                             children: [
                               CircleAvatar(
                                 radius: width * 0.08,
-                                backgroundColor: Colors.white,
-                                child: Icon(
-                                  getIcon(
-                                    category.name,
-                                  ), // or icon field if you add
-                                  color: Colors.green,
-                                  size: width * 0.07,
+                                backgroundColor: Colors.green.shade50,
+                                child: Image.network(
+                                  category.image ?? '',
+                                  width: width * 0.1,
+                                  height: width * 0.1,
+                                  fit: BoxFit.contain,
+                                  errorBuilder: (context, error, stackTrace) {
+                                    return Icon(
+                                      Icons.category,
+                                      color: Colors.grey[400],
+                                      size: width * 0.07,
+                                    );
+                                  },
                                 ),
+                                // child: Icon(
+                                //   getIcon(
+                                //     category.name,
+                                //   ), // or icon field if you add
+                                //   color: Colors.green,
+                                //   size: width * 0.07,
+                                // ),
                               ),
                               SizedBox(height: height * 0.008),
                               Text(
