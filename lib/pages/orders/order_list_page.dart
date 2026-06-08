@@ -183,7 +183,7 @@ class OrderPage extends StatelessWidget {
                       children: [
                         TextButton.icon(
                           onPressed: () {
-                            Get.to(() => OrderDetailPage(orderId: orderId,));
+                            Get.to(() => OrderDetailPage(orderId: orderId));
                           },
                           icon: const Icon(Icons.visibility_outlined, size: 18),
                           label: const Text("View Details"),

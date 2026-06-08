@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:instant_delivery/controllers/cart_controller.dart';
+import 'package:instant_delivery/controllers/coupon_controller.dart';
 import 'package:instant_delivery/pages/cart/checkout_page.dart';
+import 'package:instant_delivery/utils/delivery_charge.dart';
 import 'package:instant_delivery/widgets/navigation/custom_app_bar.dart';
 
 class CartPage extends StatefulWidget {
@@ -13,11 +15,19 @@ class CartPage extends StatefulWidget {
 
 class _CartPageState extends State<CartPage> {
   final CartController cartController = Get.put(CartController());
+  final CouponController couponController = Get.put(CouponController());
+  final TextEditingController _couponTextCtrl = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     cartController.fetchCart();
+  }
+
+  @override
+  void dispose() {
+    _couponTextCtrl.dispose();
+    super.dispose();
   }
 
   @override
@@ -29,17 +39,21 @@ class _CartPageState extends State<CartPage> {
         isTransparent: false,
         showBackButton: false,
       ),
+
       body: Obx(() {
         if (cartController.isUpdating.value) {
-          return Container(
-            color: const Color.fromARGB(255, 228, 228, 228).withOpacity(0.3),
-            child: const Center(child: CircularProgressIndicator()),
-          );
+          return const Center(child: CircularProgressIndicator());
         }
+
+        final cartTotal = cartController.cart.value?.cartTotal ?? 0;
+        final delivery = DeliveryCharge.calculate(cartTotal);
+        final discount = couponController.discountAmount.value;
+        final subtotal = cartTotal + delivery;
+        final finalAmount = subtotal - discount;
 
         return Column(
           children: [
-            /// 🛒 LIST
+            /// 🛒 ITEMS
             Expanded(
               child: ListView.builder(
                 padding: const EdgeInsets.all(25),
@@ -75,10 +89,10 @@ class _CartPageState extends State<CartPage> {
                       final success = await cartController.removeFromCart(
                         item.product_id,
                       );
-                      return success; // ✅ IMPORTANT
+                      return success;
                     },
 
-                    /// 🟢 CARD
+                    /// 🟢 CARD (this was missing!)
                     child: Container(
                       margin: const EdgeInsets.only(bottom: 12),
                       padding: const EdgeInsets.all(12),
@@ -139,14 +153,12 @@ class _CartPageState extends State<CartPage> {
                                         );
                                       }
                                     }),
-
                                     Padding(
                                       padding: const EdgeInsets.symmetric(
                                         horizontal: 10,
                                       ),
                                       child: Text("${item.quantity}"),
                                     ),
-
                                     _qtyBtn(Icons.add, () async {
                                       await cartController.updateQuantity(
                                         item.product_id,
@@ -166,9 +178,12 @@ class _CartPageState extends State<CartPage> {
               ),
             ),
 
-            /// 💳 SUMMARY CARD
+            /// 🎟 COUPON
+            _buildCouponSection(),
+
+            /// 💳 SUMMARY (FULLY REACTIVE FIX)
             Container(
-              margin: const EdgeInsets.all(12),
+              margin: const EdgeInsets.symmetric(horizontal: 12),
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: Colors.grey[200],
@@ -176,20 +191,24 @@ class _CartPageState extends State<CartPage> {
               ),
               child: Column(
                 children: [
-                  _row("Total", cartController.cart.value?.cartTotal ?? 0),
-                  _row("Delivery fee", 35),
+                  _row("Cart Total", cartTotal),
+                  _row("Delivery fee", delivery),
                   const Divider(),
-                  _row(
-                    "Sub Total",
-                    (cartController.cart.value?.cartTotal ?? 0) + 35,
-                  ),
+                  _row("Sub Total", subtotal),
+                  const Divider(),
+                  // if (discount > 0)
+                  _row("Discount ", -discount, valueColor: Colors.green),
+                  const Divider(),
+                  _row("Total", finalAmount, bold: true),
                 ],
               ),
             ),
 
-            /// 🟢 CHECKOUT BUTTON
+            const SizedBox(height: 10),
+
+            /// 🟢 CHECKOUT
             Container(
-              margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              margin: const EdgeInsets.all(12),
               width: double.infinity,
               height: 55,
               decoration: BoxDecoration(
@@ -200,13 +219,7 @@ class _CartPageState extends State<CartPage> {
               ),
               child: GestureDetector(
                 onTap: () {
-                  final cartItems = cartController.cartItems;
-
-                  final totalAmount =
-                      (cartController.cart.value?.cartTotal ?? 0) + 35;
-
-                  /// 🔥 Convert cart items to checkout format
-                  final items = cartItems.map((item) {
+                  final items = cartController.cartItems.map((item) {
                     return {
                       "name": item.product,
                       "price": item.price,
@@ -216,7 +229,12 @@ class _CartPageState extends State<CartPage> {
                   }).toList();
 
                   Get.to(
-                    () => CheckoutPage(totalAmount: totalAmount, items: items),
+                    () => CheckoutPage(
+                      totalAmount: finalAmount,
+                      items: items,
+                      appliedCouponCode: couponController.appliedCode.value,
+                      discountAmount: couponController.discountAmount.value,
+                    ),
                   );
                 },
                 child: const Center(
@@ -225,7 +243,6 @@ class _CartPageState extends State<CartPage> {
                     style: TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.bold,
-                      fontSize: 16,
                     ),
                   ),
                 ),
@@ -237,7 +254,122 @@ class _CartPageState extends State<CartPage> {
     );
   }
 
-  /// 🔹 Quantity Button
+  // ── COUPON SECTION ─────────────────────────────
+  Widget _buildCouponSection() {
+    return Obx(() {
+      if (couponController.isApplied.value) {
+        return Container(
+          margin: const EdgeInsets.all(12),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.green.shade50,
+            border: Border.all(color: Colors.green),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Row(
+            children: [
+              const Icon(Icons.local_offer, color: Colors.green),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  couponController.appliedCode.value,
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ),
+              GestureDetector(
+                onTap: () {
+                  couponController.removeCoupon();
+                  _couponTextCtrl.clear();
+                },
+                child: const Icon(Icons.close, color: Colors.red),
+              ),
+            ],
+          ),
+        );
+      }
+
+      return Container(
+        margin: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: couponController.couponMessage.value.isNotEmpty
+                ? Colors.red.shade300
+                : Colors.grey.shade300,
+          ),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            const Icon(Icons.local_offer_outlined),
+            const SizedBox(width: 8),
+
+            /// 📝 INPUT + ERROR stacked
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: _couponTextCtrl,
+                    decoration: const InputDecoration(
+                      border: InputBorder.none,
+                      hintText: "Enter coupon code",
+                    ),
+                  ),
+
+                  /// 🔴 ERROR MESSAGE (between input and Apply button)
+                  Obx(() {
+                    if (couponController.couponMessage.value.isEmpty)
+                      return const SizedBox.shrink();
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.info_outline,
+                            color: Colors.red,
+                            size: 13,
+                          ),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              couponController.couponMessage.value,
+                              style: const TextStyle(
+                                color: Colors.red,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }),
+                ],
+              ),
+            ),
+
+            TextButton(
+              onPressed: () {
+                couponController.applyCoupon(
+                  code: _couponTextCtrl.text,
+                  orderTotal: cartController.cart.value?.cartTotal ?? 0,
+                  totalQty: cartController.cartItems.fold<int>(
+                    0,
+                    (int sum, item) => sum + (item.quantity as num).toInt(),
+                  ),
+                );
+              },
+              child: const Text("Apply"),
+            ),
+          ],
+        ),
+      );
+    });
+  }
+
   Widget _qtyBtn(IconData icon, VoidCallback onTap) {
     return GestureDetector(
       onTap: onTap,
@@ -252,15 +384,25 @@ class _CartPageState extends State<CartPage> {
     );
   }
 
-  /// 🔹 Row Helper
-  Widget _row(String title, double value) {
+  Widget _row(
+    String title,
+    double value, {
+    Color? valueColor,
+    bool bold = false,
+  }) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(title, style: TextStyle(color: Colors.grey[700])),
-          Text("₹$value", style: const TextStyle(fontWeight: FontWeight.bold)),
+          Text(title),
+          Text(
+            "₹${value.toStringAsFixed(2)}",
+            style: TextStyle(
+              fontWeight: bold ? FontWeight.bold : FontWeight.normal,
+              color: valueColor,
+            ),
+          ),
         ],
       ),
     );

@@ -8,12 +8,14 @@ class PaymentPage extends StatefulWidget {
   final double totalAmount;
   final List items;
   final dynamic address;
+  final String? couponCode;
 
   const PaymentPage({
     super.key,
     required this.totalAmount,
     required this.items,
     required this.address,
+    this.couponCode,
   });
 
   @override
@@ -105,6 +107,7 @@ class _PaymentPageState extends State<PaymentPage> {
                     address: widget.address,
                     totalAmount: widget.totalAmount,
                     paymentMethod: selectedPayment,
+                    couponCode: widget.couponCode,
                   );
                 },
                 child: Text(

@@ -28,6 +28,13 @@ class ProductController extends GetxController {
 
   /// 🔥 Scroll Controller
   final ScrollController scrollController = ScrollController();
+
+  /// Flash Sale
+  var flashSaleProducts = <ProductModel>[].obs;
+  var flashSaleEndTime = Rxn<DateTime>();
+  var flashSaleTitle = ''.obs;
+  var isFlashSaleLoading = false.obs;
+
   @override
   void onInit() {
     fetchProducts();
@@ -35,6 +42,7 @@ class ProductController extends GetxController {
     fetchRecommended();
     fetchBanners();
     fetchTopBanners();
+    fetchFlashSale();
     scrollController.addListener(_scrollListener);
     super.onInit();
   }
@@ -229,6 +237,30 @@ class ProductController extends GetxController {
     } else {
       reviewCount.value = 0;
       averageRating.value = 0.0;
+    }
+  }
+
+  Future<void> fetchFlashSale() async {
+    try {
+      isFlashSaleLoading(true);
+      final response = await _apiService.getFlashSale();
+
+      if (response['flash_sale'] != null) {
+        flashSaleTitle.value = response['flash_sale']['title'] ?? 'Flash Sale';
+        flashSaleEndTime.value = DateTime.parse(
+          response['flash_sale']['end_time'],
+        ).toLocal();
+        flashSaleProducts.value = (response['products'] as List)
+            .map((e) => ProductModel.fromJson(e))
+            .toList();
+      } else {
+        flashSaleProducts.clear();
+        flashSaleEndTime.value = null;
+      }
+    } catch (e) {
+      print("Flash Sale Error: $e");
+    } finally {
+      isFlashSaleLoading(false);
     }
   }
 }

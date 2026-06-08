@@ -32,6 +32,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
   @override
   void initState() {
     super.initState();
+
     currentProduct.value = widget.product;
     controller.loadProductReviews(widget.product.id);
 
@@ -51,11 +52,16 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
       newArrivalController.fetchNewArrivals();
     }
 
-    _scrollController.animateTo(
-      0,
-      duration: const Duration(milliseconds: 400),
-      curve: Curves.easeInOut,
-    );
+    /// ✅ FIX HERE
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          0,
+          duration: const Duration(milliseconds: 400),
+          curve: Curves.easeInOut,
+        );
+      }
+    });
   }
 
   bool isInCart(int productId) {
@@ -431,11 +437,13 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
           SizedBox(height: height * 0.02),
 
           /// RECOMMENDED
-          _buildHorizontalList(
-            "Recommended for you",
-            recommendedController.recommendedList,
-            "rec",
-          ),
+          if (recommendedController.recommendedList.isNotEmpty) ...[
+            _buildHorizontalList(
+              "Recommended for you",
+              recommendedController.recommendedList,
+              "rec",
+            ),
+          ],
 
           SizedBox(height: height * 0.015),
 

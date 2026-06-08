@@ -348,6 +348,7 @@ class ApiService {
     required double totalAmount,
     required String paymentMethod,
     required String paymentStatus,
+    String? couponCode, // ✅ add this
   }) async {
     final response = await _dio.post(
       "/orders/create/",
@@ -357,6 +358,8 @@ class ApiService {
         "total_amount": totalAmount,
         "payment_method": paymentMethod,
         "payment_status": paymentStatus,
+        if (couponCode != null && couponCode.isNotEmpty)
+          "coupon_code": couponCode,
       },
     );
     return {"data": response.data, "statusCode": response.statusCode};
@@ -367,6 +370,7 @@ class ApiService {
 
     return response.data;
   }
+
   Future<List<dynamic>> getOrders() async {
     try {
       final response = await _dio.get("/orders/");
@@ -375,13 +379,57 @@ class ApiService {
       throw Exception("Failed to fetch orders: $e");
     }
   }
+
   Future<Map<String, dynamic>> getOrderDetail(int orderId) async {
-    
     final response = await _dio.get("/orders/$orderId/");
     return response.data;
   }
+
   Future<dynamic> getReviews(int productId) async {
-  final response = await _dio.get("/products/$productId/reviews/");
-  return response.data; // already JSON
-}
+    final response = await _dio.get("/products/$productId/reviews/");
+    return response.data; // already JSON
+  }
+
+  Future<Map<String, dynamic>> validateCoupon({
+    required String code,
+    required double orderTotal,
+  }) async {
+    try {
+      final response = await _dio.post(
+        '/promotions/validate-coupon/',
+        data: {'code': code, 'order_total': orderTotal},
+      );
+
+      final data = response.data as Map<String, dynamic>;
+
+      // Backend returns { success: true, ... } or { error: "..." }
+      if (response.statusCode == 200 && data['success'] == true) {
+        return data;
+      } else {
+        throw Exception(data['error'] ?? 'Invalid coupon.');
+      }
+    } on DioException catch (e) {
+      throw Exception(
+        e.response?.data['error'] ?? e.message ?? 'Network error.',
+      );
+    }
+  }
+
+  Future<Map<String, dynamic>> getFlashSale() async {
+    try {
+      final response = await _dio.get('/products/flash-sale/');
+      return response.data;
+    } on DioException catch (e) {
+      throw Exception(e.response?.data['message'] ?? "Flash sale API error");
+    }
+  }
+
+  Future<List<dynamic>> getBundles() async {
+    try {
+      final response = await _dio.get('/products/bundles/');
+      return response.data;
+    } on DioException catch (e) {
+      throw Exception(e.response?.data['message'] ?? "Bundles API error");
+    }
+  }
 }

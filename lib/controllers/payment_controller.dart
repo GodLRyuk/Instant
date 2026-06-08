@@ -1,5 +1,7 @@
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:instant_delivery/pages/orders/order_list_page.dart';
+import 'package:instant_delivery/widgets/navigation/bottom_navigation.dart';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/api_service.dart';
@@ -15,6 +17,7 @@ class PaymentController extends GetxController {
   dynamic _pendingAddress;
   double? _pendingAmount;
   String? _pendingMethod;
+  String? _pendingCouponCode;
 
   @override
   void onInit() {
@@ -30,6 +33,7 @@ class PaymentController extends GetxController {
     required dynamic address,
     required double totalAmount,
     required String paymentMethod,
+    String? couponCode,
   }) async {
     try {
       isLoading.value = true;
@@ -41,6 +45,7 @@ class PaymentController extends GetxController {
       _pendingAddress = address;
       _pendingAmount = totalAmount;
       _pendingMethod = paymentMethod;
+      _pendingCouponCode = couponCode;
 
       // ✅ Open Razorpay directly — no order created yet
       var options = {
@@ -74,12 +79,100 @@ class PaymentController extends GetxController {
         totalAmount: _pendingAmount!,
         paymentMethod: _pendingMethod!,
         paymentStatus: "PAID",
+        couponCode: _pendingCouponCode,
       );
 
       final orderId = res["data"]["order_id"];
+      final resData = res["data"];
+      final statusCode = res["statusCode"];
+      if (statusCode == 400 && orderId == null) {
+        final errorMsg =
+            resData["pincode"] ?? resData["error"] ?? "Order creation failed";
+        // Get.snackbar("Error", errorMsg);
+        Get.bottomSheet(
+          Container(
+            padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // ── Drag handle ──
+                Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 20),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
 
-      if (orderId == null) {
-        Get.snackbar("Error", "Order creation failed");
+                // ── Icon ──
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.red.shade50,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.location_off_rounded,
+                    color: Colors.red.shade400,
+                    size: 36,
+                  ),
+                ),
+
+                const SizedBox(height: 16),
+
+                // ── Title ──
+                const Text(
+                  "Delivery Unavailable",
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+
+                const SizedBox(height: 8),
+
+                // ── Message ──
+                Text(
+                  errorMsg,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
+                ),
+
+                const SizedBox(height: 24),
+
+                // ── Button ──
+                SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                    onPressed: () {
+                      Get.back();
+                      // Get.offAll(() => const MainNavigation(initialIndex: 2));
+                    },
+                    child: const Text(
+                      "Back",
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 15,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          isScrollControlled: true,
+        );
         return;
       }
 
@@ -96,7 +189,7 @@ class PaymentController extends GetxController {
       );
 
       // ✅ Navigate to success page
-      Get.offAll(() => OrderPage());
+      Get.offAll(() => const MainNavigation(initialIndex: 2));
     } catch (e) {
       Get.snackbar(
         "Error",

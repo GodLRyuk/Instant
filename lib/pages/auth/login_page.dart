@@ -7,7 +7,6 @@ import 'package:instant_delivery/widgets/buttons/custom_button.dart';
 import '../../controllers/auth_controller.dart';
 
 class LoginPage extends StatefulWidget {
-
   LoginPage({super.key});
 
   @override
@@ -48,18 +47,19 @@ class _LoginPageState extends State<LoginPage> {
                   child: Padding(
                     padding: EdgeInsets.symmetric(
                       horizontal: screenWidth * 0.08,
-                      vertical: screenHeight * 0.1,
+                      vertical: screenHeight * 0.08,
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        SizedBox(height: screenHeight * 0.01),
+                        SizedBox(height: screenHeight * 0.10),
                         Image.asset(
                           'assets/images/logo_transperent.png',
-                          width: screenWidth * 0.90,
+                          width: screenWidth * 1,
+                          // height: screenHeight * 0.99,
                           fit: BoxFit.contain,
                         ),
-                        SizedBox(height: screenHeight * 0.10),
+                        // SizedBox(height: screenHeight * 0.10),
 
                         // Username Field
                         Container(
