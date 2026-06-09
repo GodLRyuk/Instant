@@ -190,7 +190,7 @@ class BundleStrip extends StatelessWidget {
                                   ),
                                 ),
                                 Text(
-                                  '₹${bundle.originalPrice.toStringAsFixed(0)}',
+                                  '₹${(bundle.originalPrice).toStringAsFixed(0)}',
                                   style: TextStyle(
                                     color: Colors.grey,
                                     fontSize: width * 0.03,
