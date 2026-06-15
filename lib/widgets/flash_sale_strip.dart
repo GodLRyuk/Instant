@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:instant_delivery/controllers/product_controller.dart';
+import 'package:instant_delivery/controllers/wishlist_controller.dart';
 import 'package:instant_delivery/pages/product/product_details_page.dart';
 
 class FlashSaleStrip extends StatefulWidget {
@@ -15,6 +16,8 @@ class FlashSaleStrip extends StatefulWidget {
 class _FlashSaleStripState extends State<FlashSaleStrip> {
   Timer? _timer;
   Duration _remaining = Duration.zero;
+
+  final WishlistController wishlistController = Get.find();
 
   @override
   void initState() {
@@ -173,106 +176,144 @@ class _FlashSaleStripState extends State<FlashSaleStrip> {
                         BoxShadow(color: Colors.black12, blurRadius: 5),
                       ],
                     ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(10),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Discount badge
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 6,
-                              vertical: 2,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.red,
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: Text(
-                              '-$discountInt%',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600,
+                    child: Stack(
+                      children: [
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Discount badge
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 2,
                               ),
-                            ),
-                          ),
-
-                          // Product image
-                          Expanded(
-                            child: Center(
-                              child: Image.network(
-                                product.image,
-                                fit: BoxFit.contain,
-                                errorBuilder: (_, __, ___) => const Icon(
-                                  Icons.image_not_supported,
-                                  color: Colors.grey,
-                                ),
+                              decoration: BoxDecoration(
+                                color: Colors.red,
+                                borderRadius: BorderRadius.circular(4),
                               ),
-                            ),
-                          ),
-
-                          // Name
-                          Text(
-                            product.name,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: width * 0.032,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-
-                          SizedBox(height: height * 0.003),
-
-                          // Prices row
-                          Row(
-                            children: [
-                              Text(
-                                '₹${product.discounted_price.toStringAsFixed(0)}',
-                                style: TextStyle(
-                                  color: Colors.green,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: width * 0.035,
-                                ),
-                              ),
-                              SizedBox(width: width * 0.02),
-                              Text(
-                                '₹${product.price.toStringAsFixed(0)}',
-                                style: TextStyle(
-                                  color: Colors.grey,
-                                  fontSize: width * 0.028,
-                                  decoration: TextDecoration.lineThrough,
-                                ),
-                              ),
-                            ],
-                          ),
-
-                          SizedBox(height: height * 0.006),
-
-                          // Add button
-                          Container(
-                            width: double.infinity,
-                            padding: EdgeInsets.symmetric(
-                              vertical: height * 0.007,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.green,
-                              borderRadius: BorderRadius.circular(width * 0.02),
-                            ),
-                            child: Center(
                               child: Text(
-                                'View',
-                                style: TextStyle(
+                                '-$discountInt%',
+                                style: const TextStyle(
                                   color: Colors.white,
-                                  fontSize: width * 0.032,
+                                  fontSize: 11,
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
                             ),
+
+                            // Product image
+                            Expanded(
+                              child: Center(
+                                child: Image.network(
+                                  product.image,
+                                  fit: BoxFit.contain,
+                                  errorBuilder: (_, __, ___) => const Icon(
+                                    Icons.image_not_supported,
+                                    color: Colors.grey,
+                                  ),
+                                ),
+                              ),
+                            ),
+
+                            // Name
+                            Text(
+                              product.name,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: width * 0.032,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+
+                            SizedBox(height: height * 0.003),
+
+                            // Prices row
+                            Row(
+                              children: [
+                                Text(
+                                  '₹${product.discounted_price.toStringAsFixed(0)}',
+                                  style: TextStyle(
+                                    color: Colors.green,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: width * 0.035,
+                                  ),
+                                ),
+                                SizedBox(width: width * 0.02),
+                                Text(
+                                  '₹${product.price.toStringAsFixed(0)}',
+                                  style: TextStyle(
+                                    color: Colors.grey,
+                                    fontSize: width * 0.028,
+                                    decoration: TextDecoration.lineThrough,
+                                  ),
+                                ),
+                              ],
+                            ),
+
+                            SizedBox(height: height * 0.006),
+
+                            // Add button
+                            Container(
+                              width: double.infinity,
+                              padding: EdgeInsets.symmetric(
+                                vertical: height * 0.007,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.green,
+                                borderRadius: BorderRadius.circular(
+                                  width * 0.02,
+                                ),
+                              ),
+                              child: Center(
+                                child: Text(
+                                  'View',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: width * 0.032,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        Positioned(
+                          top: 4,
+                          right: 4,
+                          child: Obx(
+                            () => GestureDetector(
+                              onTap: () => wishlistController.toggle(product),
+                              child: Container(
+                                width: 28,
+                                height: 28,
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  shape: BoxShape.circle,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black12,
+                                      blurRadius: 4,
+                                    ),
+                                  ],
+                                ),
+                                child: Icon(
+                                  wishlistController.isWishlisted(product.id)
+                                      ? Icons.favorite
+                                      : Icons.favorite_border,
+                                  size: 16,
+                                  color:
+                                      wishlistController.isWishlisted(
+                                        product.id,
+                                      )
+                                      ? Color(0xFFE0386A)
+                                      : Colors.grey,
+                                ),
+                              ),
+                            ),
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
                   ),
                 );

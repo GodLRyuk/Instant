@@ -27,7 +27,8 @@ class ApiService {
         data: LoginModel(email: email, password: password).toJson(),
         options: Options(headers: {'Content-Type': 'application/json'}),
       );
-
+      print("Login Response: ${response.data}");
+      print("Status Code: ${email}, ${password}");
       if (response.data is Map<String, dynamic>) {
         final data = response.data;
 
@@ -348,7 +349,9 @@ class ApiService {
     required double totalAmount,
     required String paymentMethod,
     required String paymentStatus,
-    String? couponCode, // ✅ add this
+    String? couponCode,
+    String? currentLat,
+    String? currentLng,
   }) async {
     final response = await _dio.post(
       "/orders/create/",
@@ -360,6 +363,8 @@ class ApiService {
         "payment_status": paymentStatus,
         if (couponCode != null && couponCode.isNotEmpty)
           "coupon_code": couponCode,
+        if (currentLat != null) "current_lat": double.tryParse(currentLat),
+        if (currentLng != null) "current_lng": double.tryParse(currentLng),
       },
     );
     return {"data": response.data, "statusCode": response.statusCode};

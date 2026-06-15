@@ -18,6 +18,8 @@ class PaymentController extends GetxController {
   double? _pendingAmount;
   String? _pendingMethod;
   String? _pendingCouponCode;
+  String? _currentLat;
+  String? _currentLng;
 
   @override
   void onInit() {
@@ -34,6 +36,8 @@ class PaymentController extends GetxController {
     required double totalAmount,
     required String paymentMethod,
     String? couponCode,
+    String? currentLat,
+    String? currentLng,
   }) async {
     try {
       isLoading.value = true;
@@ -46,8 +50,8 @@ class PaymentController extends GetxController {
       _pendingAmount = totalAmount;
       _pendingMethod = paymentMethod;
       _pendingCouponCode = couponCode;
-
-      // ✅ Open Razorpay directly — no order created yet
+      _currentLat = currentLat;
+      _currentLng = currentLng;
       var options = {
         'key': 'rzp_test_StsVgck8iNAA8a',
         'amount': (totalAmount * 100).toInt(), // paise
@@ -80,6 +84,8 @@ class PaymentController extends GetxController {
         paymentMethod: _pendingMethod!,
         paymentStatus: "PAID",
         couponCode: _pendingCouponCode,
+        currentLat: _currentLat, // ✅ NEW
+        currentLng: _currentLng,
       );
 
       final orderId = res["data"]["order_id"];
@@ -87,7 +93,10 @@ class PaymentController extends GetxController {
       final statusCode = res["statusCode"];
       if (statusCode == 400 && orderId == null) {
         final errorMsg =
-            resData["pincode"] ?? resData["error"] ?? "Order creation failed";
+            resData["pincode"] ??
+            resData["location"] ??
+            resData["error"] ??
+            "Order creation failed";
         // Get.snackbar("Error", errorMsg);
         Get.bottomSheet(
           Container(
@@ -181,6 +190,8 @@ class PaymentController extends GetxController {
       _pendingAddress = null;
       _pendingAmount = null;
       _pendingMethod = null;
+      _currentLat = null;
+      _currentLng = null;
 
       Get.snackbar(
         "Success",

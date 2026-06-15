@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:get/get_core/src/get_main.dart';
 import 'package:get/get_instance/src/extension_instance.dart';
 import 'package:instant_delivery/controllers/order_controller.dart';
+import 'package:instant_delivery/controllers/wishlist_controller.dart';
 import 'package:instant_delivery/pages/cart/cart_page.dart';
 import 'package:instant_delivery/pages/home/home_page.dart';
 import 'package:instant_delivery/pages/orders/order_list_page.dart';
 import 'package:instant_delivery/pages/profile/profile_page.dart';
+import 'package:instant_delivery/pages/wishlist/wishlist_page.dart';
 
 class MainNavigation extends StatefulWidget {
   final int initialIndex;
@@ -19,9 +21,11 @@ class MainNavigation extends StatefulWidget {
 class _MainNavigationState extends State<MainNavigation> {
   late int _currentIndex;
   final OrderController orderController = Get.put(OrderController());
+  final WishlistController wishlistController = Get.put(WishlistController());
   final List<Widget> _pages = [
     ProfilePage(),
     HomePage(),
+    WishlistPage(),
     OrderPage(),
     CartPage(),
   ];
@@ -60,8 +64,9 @@ class _MainNavigationState extends State<MainNavigation> {
         children: [
           _buildNavItem(Icons.menu, 0),
           _buildNavItem(Icons.home, 1),
-          _buildNavItem(Icons.local_shipping, 2),
-          _buildNavItem(Icons.shopping_cart, 3),
+          _buildNavItem(Icons.favorite_border, 2),
+          _buildNavItem(Icons.local_shipping, 3),
+          _buildNavItem(Icons.shopping_cart, 4),
         ],
       ),
     );
@@ -116,8 +121,10 @@ class _MainNavigationState extends State<MainNavigation> {
       case 1:
         return "Home";
       case 2:
-        return "Order";
+        return "Wishlist";
       case 3:
+        return "Orders";
+      case 4:
         return "Cart";
       default:
         return "";

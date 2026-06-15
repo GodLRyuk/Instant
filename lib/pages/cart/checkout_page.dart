@@ -489,35 +489,35 @@ class _CheckoutPageState extends State<CheckoutPage> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    onPressed: () {
+                    onPressed: () async {
                       if (addressController.selectedAddress.value == null) {
                         Get.snackbar("Error", "Please select an address");
                         return;
                       }
-                      // ── DEBUG ──
-                      print(
-                        "🎯 widget.appliedCouponCode: ${widget.appliedCouponCode}",
-                      );
-                      print("🎯 _localCouponCode: $_localCouponCode");
-                      print("🎯 _activeCouponCode: $_activeCouponCode");
-                      print(
-                        "🎯 couponController.appliedCode: ${couponController.appliedCode.value}",
-                      );
-                      // ──────────
+                      try {
+                        final locationData =
+                            await LocationService.getCurrentAddress();
+                        final String? lat = locationData["lat"];
+                        final String? lng = locationData["lng"];
 
-                      Get.to(
-                        () => PaymentPage(
-                          totalAmount: finalAmount,
-                          items: widget.items,
-                          address: addressController.selectedAddress.value,
-                          couponCode: _activeCouponCode.isNotEmpty
-                              ? _activeCouponCode
-                              : null,
-                        ),
-                      );
-                      print(
-                        "🎟️ active coupon being passed to PaymentPage: $_activeCouponCode",
-                      );
+                        Get.to(
+                          () => PaymentPage(
+                            totalAmount: finalAmount,
+                            items: widget.items,
+                            address: addressController.selectedAddress.value,
+                            couponCode: _activeCouponCode.isNotEmpty
+                                ? _activeCouponCode
+                                : null,
+                            currentLat: lat, // ✅ NEW
+                            currentLng: lng, // ✅ NEW
+                          ),
+                        );
+                      } catch (e) {
+                        Get.snackbar(
+                          "Location Error",
+                          "Could not get your location. Please enable GPS.",
+                        );
+                      }
                     },
                     child: const Text(
                       "Confirm Order",

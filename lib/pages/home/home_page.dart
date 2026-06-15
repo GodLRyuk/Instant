@@ -5,6 +5,7 @@ import 'package:get/get.dart';
 import 'package:instant_delivery/controllers/bundle_controller.dart';
 import 'package:instant_delivery/controllers/category_controller.dart';
 import 'package:instant_delivery/controllers/product_controller.dart';
+import 'package:instant_delivery/controllers/wishlist_controller.dart';
 import 'package:instant_delivery/pages/product/all_products.dart';
 import 'package:instant_delivery/pages/product/product_details_page.dart';
 import 'package:instant_delivery/widgets/bundle_strip.dart';
@@ -50,7 +51,7 @@ class _HomePageState extends State<HomePage> {
     ProductController(),
     tag: "flash",
   );
-
+  final WishlistController wishlistController = Get.put(WishlistController());
   @override
   void initState() {
     super.initState();
@@ -374,91 +375,135 @@ class _HomePageState extends State<HomePage> {
                             BoxShadow(color: Colors.black12, blurRadius: 5),
                           ],
                         ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(8.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              // 🔥 Product Image
-                              Expanded(
-                                child: ClipRRect(
-                                  borderRadius: BorderRadius.vertical(
-                                    top: Radius.circular(width * 0.04),
-                                  ),
-                                  child: Image.network(
-                                    product.image,
-                                    width: double.infinity,
-                                    fit: BoxFit.contain,
-                                  ),
-                                ),
-                              ),
-
-                              Padding(
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: width * 0.02,
-                                  vertical: height * 0.008,
-                                ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    // 🔥 Product Name
-                                    Text(
-                                      product.name,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: TextStyle(
-                                        fontSize: width * 0.035,
-                                        fontWeight: FontWeight.w600,
+                        child: Stack(
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.all(8.0),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  // 🔥 Product Image
+                                  Expanded(
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.vertical(
+                                        top: Radius.circular(width * 0.04),
                                       ),
-                                    ),
-
-                                    // 🔥 Price
-                                    Text(
-                                      "₹${product.price}",
-                                      style: TextStyle(
-                                        color: Colors.green,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: width * 0.035,
-                                      ),
-                                    ),
-                                    SizedBox(height: height * 0.005),
-
-                                    // 🔥 Add to Cart Button
-                                    GestureDetector(
-                                      onTap: () {
-                                        Get.to(
-                                          () => ProductDetailsPage(
-                                            product: product,
-                                          ),
-                                        );
-                                      },
-                                      child: Container(
+                                      child: Image.network(
+                                        product.image,
                                         width: double.infinity,
-                                        padding: EdgeInsets.symmetric(
-                                          vertical: height * 0.008,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: Colors.green,
-                                          borderRadius: BorderRadius.circular(
-                                            width * 0.02,
+                                        fit: BoxFit.contain,
+                                      ),
+                                    ),
+                                  ),
+
+                                  Padding(
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: width * 0.02,
+                                      vertical: height * 0.008,
+                                    ),
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        // 🔥 Product Name
+                                        Text(
+                                          product.name,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: TextStyle(
+                                            fontSize: width * 0.035,
+                                            fontWeight: FontWeight.w600,
                                           ),
                                         ),
-                                        child: Center(
-                                          child: Text(
-                                            "View",
-                                            style: TextStyle(
-                                              color: Colors.white,
-                                              fontSize: width * 0.035,
+
+                                        // 🔥 Price
+                                        Text(
+                                          "₹${product.price}",
+                                          style: TextStyle(
+                                            color: Colors.green,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: width * 0.035,
+                                          ),
+                                        ),
+                                        SizedBox(height: height * 0.005),
+
+                                        // 🔥 Add to Cart Button
+                                        GestureDetector(
+                                          onTap: () {
+                                            Get.to(
+                                              () => ProductDetailsPage(
+                                                product: product,
+                                              ),
+                                            );
+                                          },
+                                          child: Container(
+                                            width: double.infinity,
+                                            padding: EdgeInsets.symmetric(
+                                              vertical: height * 0.008,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: Colors.green,
+                                              borderRadius:
+                                                  BorderRadius.circular(
+                                                    width * 0.02,
+                                                  ),
+                                            ),
+                                            child: Center(
+                                              child: Text(
+                                                "View",
+                                                style: TextStyle(
+                                                  color: Colors.white,
+                                                  fontSize: width * 0.035,
+                                                ),
+                                              ),
                                             ),
                                           ),
                                         ),
-                                      ),
+                                      ],
                                     ),
-                                  ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Positioned(
+                              top: 4,
+                              right: 4,
+                              child: Obx(
+                                () => GestureDetector(
+                                  onTap: () =>
+                                      wishlistController.toggle(product),
+                                  child: Container(
+                                    width: 30,
+                                    height: 30,
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      shape: BoxShape.circle,
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black12,
+                                          blurRadius: 4,
+                                        ),
+                                      ],
+                                    ),
+                                    child: Icon(
+                                      wishlistController.isWishlisted(
+                                            product.id,
+                                          )
+                                          ? Icons.favorite
+                                          : Icons.favorite_border,
+                                      size: 16,
+                                      color:
+                                          wishlistController.isWishlisted(
+                                            product.id,
+                                          )
+                                          ? Color(0xFFE0386A)
+                                          : Colors.grey,
+                                    ),
+                                  ),
                                 ),
                               ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
                       );
                     },
@@ -529,85 +574,129 @@ class _HomePageState extends State<HomePage> {
                               BoxShadow(color: Colors.black12, blurRadius: 6),
                             ],
                           ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                          child: Stack(
                             children: [
-                              // 🔥 Image
-                              Expanded(
-                                child: Padding(
-                                  padding: const EdgeInsets.only(top: 4.0),
-                                  child: ClipRRect(
-                                    borderRadius: BorderRadius.vertical(
-                                      top: Radius.circular(width * 0.04),
-                                    ),
-                                    child: Image.network(
-                                      product.image,
-                                      width: double.infinity,
-                                      fit: BoxFit.contain,
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  // 🔥 Image
+                                  Expanded(
+                                    child: Padding(
+                                      padding: const EdgeInsets.only(top: 4.0),
+                                      child: ClipRRect(
+                                        borderRadius: BorderRadius.vertical(
+                                          top: Radius.circular(width * 0.04),
+                                        ),
+                                        child: Image.network(
+                                          product.image,
+                                          width: double.infinity,
+                                          fit: BoxFit.contain,
+                                        ),
+                                      ),
                                     ),
                                   ),
-                                ),
-                              ),
 
-                              Padding(
-                                padding: const EdgeInsets.all(15.0),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    // 🔥 Name
-                                    Text(
-                                      product.name,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: TextStyle(
-                                        fontSize: width * 0.035,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-
-                                    SizedBox(height: height * 0.005),
-
-                                    // 🔥 Price
-                                    Text(
-                                      "₹${product.price}",
-                                      style: TextStyle(
-                                        color: Colors.green,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-
-                                    SizedBox(height: height * 0.008),
-
-                                    // 🔥 Add Button (Small pill style)
-                                    GestureDetector(
-                                      onTap: () {
-                                        Get.to(
-                                          () => ProductDetailsPage(
-                                            product: product,
-                                          ),
-                                        );
-                                      },
-                                      child: Container(
-                                        padding: EdgeInsets.symmetric(
-                                          vertical: height * 0.006,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: Colors.green,
-                                          borderRadius: BorderRadius.circular(
-                                            width * 0.02,
+                                  Padding(
+                                    padding: const EdgeInsets.all(15.0),
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        // 🔥 Name
+                                        Text(
+                                          product.name,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: TextStyle(
+                                            fontSize: width * 0.035,
+                                            fontWeight: FontWeight.w600,
                                           ),
                                         ),
-                                        child: const Center(
-                                          child: Text(
-                                            "View",
-                                            style: TextStyle(
-                                              color: Colors.white,
+
+                                        SizedBox(height: height * 0.005),
+
+                                        // 🔥 Price
+                                        Text(
+                                          "₹${product.price}",
+                                          style: TextStyle(
+                                            color: Colors.green,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+
+                                        SizedBox(height: height * 0.008),
+
+                                        // 🔥 Add Button (Small pill style)
+                                        GestureDetector(
+                                          onTap: () {
+                                            Get.to(
+                                              () => ProductDetailsPage(
+                                                product: product,
+                                              ),
+                                            );
+                                          },
+                                          child: Container(
+                                            padding: EdgeInsets.symmetric(
+                                              vertical: height * 0.006,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: Colors.green,
+                                              borderRadius:
+                                                  BorderRadius.circular(
+                                                    width * 0.02,
+                                                  ),
+                                            ),
+                                            child: const Center(
+                                              child: Text(
+                                                "View",
+                                                style: TextStyle(
+                                                  color: Colors.white,
+                                                ),
+                                              ),
                                             ),
                                           ),
                                         ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              Positioned(
+                                top: 4,
+                                right: 4,
+                                child: Obx(
+                                  () => GestureDetector(
+                                    onTap: () =>
+                                        wishlistController.toggle(product),
+                                    child: Container(
+                                      width: 28,
+                                      height: 28,
+                                      decoration: BoxDecoration(
+                                        color: Colors.white,
+                                        shape: BoxShape.circle,
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Colors.black12,
+                                            blurRadius: 4,
+                                          ),
+                                        ],
+                                      ),
+                                      child: Icon(
+                                        wishlistController.isWishlisted(
+                                              product.id,
+                                            )
+                                            ? Icons.favorite
+                                            : Icons.favorite_border,
+                                        size: 16,
+                                        color:
+                                            wishlistController.isWishlisted(
+                                              product.id,
+                                            )
+                                            ? Color(0xFFE0386A)
+                                            : Colors.grey,
                                       ),
                                     ),
-                                  ],
+                                  ),
                                 ),
                               ),
                             ],
@@ -793,122 +882,171 @@ class _HomePageState extends State<HomePage> {
                                   ),
                                 ],
                               ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                              child: Stack(
                                 children: [
-                                  // Image with index badge
-                                  Stack(
+                                  Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
-                                      Container(
-                                        height: height * 0.14,
-                                        decoration: BoxDecoration(
-                                          color: index.isEven
-                                              ? Colors.white
-                                              : Colors.white,
-                                          borderRadius:
-                                              const BorderRadius.vertical(
-                                                top: Radius.circular(20),
+                                      // Image with index badge
+                                      Stack(
+                                        children: [
+                                          Container(
+                                            height: height * 0.14,
+                                            decoration: BoxDecoration(
+                                              color: index.isEven
+                                                  ? Colors.white
+                                                  : Colors.white,
+                                              borderRadius:
+                                                  const BorderRadius.vertical(
+                                                    top: Radius.circular(20),
+                                                  ),
+                                            ),
+                                            child: ClipRRect(
+                                              borderRadius:
+                                                  const BorderRadius.vertical(
+                                                    top: Radius.circular(20),
+                                                  ),
+                                              child: Image.network(
+                                                product.image,
+                                                width: double.infinity,
+                                                fit: BoxFit.contain,
+                                                errorBuilder: (_, __, ___) =>
+                                                    Icon(
+                                                      Icons.image_not_supported,
+                                                      color: Colors.grey[300],
+                                                    ),
                                               ),
-                                        ),
-                                        child: ClipRRect(
-                                          borderRadius:
-                                              const BorderRadius.vertical(
-                                                top: Radius.circular(20),
-                                              ),
-                                          child: Image.network(
-                                            product.image,
-                                            width: double.infinity,
-                                            fit: BoxFit.contain,
-                                            errorBuilder: (_, __, ___) => Icon(
-                                              Icons.image_not_supported,
-                                              color: Colors.grey[300],
                                             ),
                                           ),
-                                        ),
+                                          // Index badge
+                                          Positioned(
+                                            top: 8,
+                                            left: 8,
+                                            child: Container(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 8,
+                                                    vertical: 3,
+                                                  ),
+                                              decoration: BoxDecoration(
+                                                color: Colors.grey[900],
+                                                borderRadius:
+                                                    BorderRadius.circular(20),
+                                              ),
+                                              child: Text(
+                                                '#${index + 1}',
+                                                style: const TextStyle(
+                                                  color: Colors.white,
+                                                  fontSize: 10,
+                                                  fontWeight: FontWeight.w800,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
                                       ),
-                                      // Index badge
-                                      Positioned(
-                                        top: 8,
-                                        left: 8,
-                                        child: Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 8,
-                                            vertical: 3,
+
+                                      // Info
+                                      Expanded(
+                                        child: Padding(
+                                          padding: const EdgeInsets.fromLTRB(
+                                            10,
+                                            8,
+                                            10,
+                                            10,
                                           ),
-                                          decoration: BoxDecoration(
-                                            color: Colors.grey[900],
-                                            borderRadius: BorderRadius.circular(
-                                              20,
-                                            ),
-                                          ),
-                                          child: Text(
-                                            '#${index + 1}',
-                                            style: const TextStyle(
-                                              color: Colors.white,
-                                              fontSize: 10,
-                                              fontWeight: FontWeight.w800,
-                                            ),
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.spaceBetween,
+                                            children: [
+                                              Text(
+                                                product.name,
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                                style: TextStyle(
+                                                  fontSize: width * 0.032,
+                                                  fontWeight: FontWeight.w700,
+                                                  color: Colors.grey[850],
+                                                ),
+                                              ),
+                                              Row(
+                                                mainAxisAlignment:
+                                                    MainAxisAlignment
+                                                        .spaceBetween,
+                                                children: [
+                                                  Text(
+                                                    '₹${product.price.toStringAsFixed(0)}',
+                                                    style: TextStyle(
+                                                      color:
+                                                          Colors.green.shade700,
+                                                      fontWeight:
+                                                          FontWeight.w800,
+                                                      fontSize: width * 0.038,
+                                                    ),
+                                                  ),
+                                                  Container(
+                                                    padding:
+                                                        const EdgeInsets.all(6),
+                                                    decoration: BoxDecoration(
+                                                      color:
+                                                          Colors.green.shade700,
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                            10,
+                                                          ),
+                                                    ),
+                                                    child: const Icon(
+                                                      Icons.arrow_forward,
+                                                      color: Colors.white,
+                                                      size: 14,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ],
                                           ),
                                         ),
                                       ),
                                     ],
                                   ),
-
-                                  // Info
-                                  Expanded(
-                                    child: Padding(
-                                      padding: const EdgeInsets.fromLTRB(
-                                        10,
-                                        8,
-                                        10,
-                                        10,
-                                      ),
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          Text(
-                                            product.name,
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                            style: TextStyle(
-                                              fontSize: width * 0.032,
-                                              fontWeight: FontWeight.w700,
-                                              color: Colors.grey[850],
-                                            ),
-                                          ),
-                                          Row(
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.spaceBetween,
-                                            children: [
-                                              Text(
-                                                '₹${product.price.toStringAsFixed(0)}',
-                                                style: TextStyle(
-                                                  color: Colors.green.shade700,
-                                                  fontWeight: FontWeight.w800,
-                                                  fontSize: width * 0.038,
-                                                ),
-                                              ),
-                                              Container(
-                                                padding: const EdgeInsets.all(
-                                                  6,
-                                                ),
-                                                decoration: BoxDecoration(
-                                                  color: Colors.green.shade700,
-                                                  borderRadius:
-                                                      BorderRadius.circular(10),
-                                                ),
-                                                child: const Icon(
-                                                  Icons.arrow_forward,
-                                                  color: Colors.white,
-                                                  size: 14,
-                                                ),
+                                  Positioned(
+                                    top: 4,
+                                    right: 4,
+                                    child: Obx(
+                                      () => GestureDetector(
+                                        onTap: () =>
+                                            wishlistController.toggle(product),
+                                        child: Container(
+                                          width: 28,
+                                          height: 28,
+                                          decoration: BoxDecoration(
+                                            color: Colors.white,
+                                            shape: BoxShape.circle,
+                                            boxShadow: [
+                                              BoxShadow(
+                                                color: Colors.black12,
+                                                blurRadius: 4,
                                               ),
                                             ],
                                           ),
-                                        ],
+                                          child: Icon(
+                                            wishlistController.isWishlisted(
+                                                  product.id,
+                                                )
+                                                ? Icons.favorite
+                                                : Icons.favorite_border,
+                                            size: 16,
+                                            color:
+                                                wishlistController.isWishlisted(
+                                                  product.id,
+                                                )
+                                                ? Color(0xFFE0386A)
+                                                : Colors.grey,
+                                          ),
+                                        ),
                                       ),
                                     ),
                                   ),

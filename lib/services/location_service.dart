@@ -29,10 +29,11 @@ Future<Map<String, String>> getCurrentAddress() async {
   final place = placemarks.first;
 
   return {
-    "fullAddress":
-        "${place.street}, ${place.subLocality}, ${place.locality}",
+    "fullAddress": "${place.street}, ${place.subLocality}, ${place.locality}",
     "city": place.locality ?? "",
     "state": place.administrativeArea ?? "",
     "pincode": place.postalCode ?? "",
+    "lat": position.latitude.toString(), // ✅ NEW
+    "lng": position.longitude.toString(),
   };
 }
