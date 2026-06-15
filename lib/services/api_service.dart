@@ -437,4 +437,22 @@ class ApiService {
       throw Exception(e.response?.data['message'] ?? "Bundles API error");
     }
   }
+
+  Future<Map<String, dynamic>> validateOrder({
+    required List items,
+    required dynamic addressId,
+    String? currentLat,
+    String? currentLng,
+  }) async {
+    final response = await _dio.post(
+      "/orders/validate/",
+      data: {
+        "items": items,
+        "address_id": addressId,
+        if (currentLat != null) "current_lat": double.tryParse(currentLat),
+        if (currentLng != null) "current_lng": double.tryParse(currentLng),
+      },
+    );
+    return {"data": response.data, "statusCode": response.statusCode};
+  }
 }
