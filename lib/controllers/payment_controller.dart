@@ -56,16 +56,19 @@ class PaymentController extends GetxController {
       final validateData = validateRes["data"];
 
       if (validateStatus == 400) {
-        final errorMsg =
-            validateData["location"] ??
-            validateData["pincode"] ??
-            validateData["stock"] ??
-            validateData["address"] ??
-            "Validation failed. Please try again.";
+        final data = validateData;
+        String errorMsg = "Validation failed. Please try again.";
+
+        if (data is List && data.isNotEmpty) {
+          errorMsg = data.first.toString();
+        } else if (data is Map) {
+          final val = data.values.first;
+          errorMsg = val is List ? val.first.toString() : val.toString();
+        }
+
         _showErrorSheet(errorMsg);
         return;
       }
-
       if (validateStatus != 200) {
         _showErrorSheet("Something went wrong. Please try again.");
         return;
