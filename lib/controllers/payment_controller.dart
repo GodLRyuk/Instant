@@ -19,6 +19,10 @@ class PaymentController extends GetxController {
   String? _pendingCouponCode;
   String? _currentLat;
   String? _currentLng;
+  String? _pendingDeliveryType;
+  String? _pendingScheduledDate;
+  String? _pendingScheduledSlotStart;
+  String? _pendingScheduledSlotEnd;
 
   @override
   void onInit() {
@@ -37,6 +41,10 @@ class PaymentController extends GetxController {
     String? couponCode,
     String? currentLat,
     String? currentLng,
+    String deliveryType = 'ASAP',
+    String? scheduledDate,
+    String? scheduledSlotStart,
+    String? scheduledSlotEnd,
   }) async {
     try {
       isLoading.value = true;
@@ -82,6 +90,10 @@ class PaymentController extends GetxController {
       _pendingCouponCode = couponCode;
       _currentLat = currentLat;
       _currentLng = currentLng;
+      _pendingDeliveryType = deliveryType;
+      _pendingScheduledDate = scheduledDate;
+      _pendingScheduledSlotStart = scheduledSlotStart;
+      _pendingScheduledSlotEnd = scheduledSlotEnd;
 
       // COD: skip Razorpay, go straight to createOrder
       if (paymentMethod == "COD") {
@@ -128,6 +140,10 @@ class PaymentController extends GetxController {
         couponCode: _pendingCouponCode,
         currentLat: _currentLat,
         currentLng: _currentLng,
+        deliveryType: _pendingDeliveryType ?? 'ASAP',
+        scheduledDate: _pendingScheduledDate,
+        scheduledSlotStart: _pendingScheduledSlotStart,
+        scheduledSlotEnd: _pendingScheduledSlotEnd,
       );
 
       final statusCode = res["statusCode"];
@@ -173,6 +189,10 @@ class PaymentController extends GetxController {
     _pendingCouponCode = null;
     _currentLat = null;
     _currentLng = null;
+    _pendingDeliveryType = null;
+    _pendingScheduledDate = null;
+    _pendingScheduledSlotStart = null;
+    _pendingScheduledSlotEnd = null;
   }
 
   // Payment cancelled/failed — no order was created, nothing to clean up

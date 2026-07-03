@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:instant_delivery/controllers/address_controller.dart';
 import 'package:instant_delivery/controllers/order_controller.dart';
+import 'package:instant_delivery/controllers/pass_controller.dart';
 import 'package:instant_delivery/controllers/profile_controller.dart';
+import 'package:instant_delivery/pages/membership/pass_purchase_screen.dart';
 import 'package:instant_delivery/pages/orders/order_detail_page.dart';
 import 'package:instant_delivery/pages/orders/order_list_page.dart';
 import 'package:instant_delivery/pages/profile/edit_profile_page.dart';
@@ -20,6 +22,7 @@ class _ProfilePageState extends State<ProfilePage> {
   final ProfileController profileController = Get.put(ProfileController());
   final AddressController addressController = Get.put(AddressController());
   final OrderController ordercontroller = Get.put(OrderController());
+  final PassController passController = Get.put(PassController());
 
   bool showAddresses = true;
   bool isFetched = false;
@@ -320,6 +323,25 @@ class _ProfilePageState extends State<ProfilePage> {
                   ),
 
             const SizedBox(height: 10),
+            // In your profile page
+            Obx(() {
+              final pass = Get.find<PassController>();
+              return ListTile(
+                leading: const Icon(Icons.delivery_dining, color: Colors.green),
+                title: Text(
+                  pass.hasPass.value
+                      ? "Delivery Pass Active ✅"
+                      : "Get Delivery Pass",
+                ),
+                subtitle: Text(
+                  pass.hasPass.value
+                      ? "Valid until ${pass.validUntil.value}"
+                      : "Free delivery from ₹99/month",
+                ),
+                trailing: const Icon(Icons.arrow_forward_ios, size: 14),
+                onTap: () => Get.to(() => const PassPurchasePage()),
+              );
+            }),
 
             /// ================= LOGOUT =================
             Padding(

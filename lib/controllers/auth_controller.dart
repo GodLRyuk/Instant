@@ -29,6 +29,6 @@ class AuthController extends GetxController {
 
     isLoggedIn.value = true;
 
-    Get.to(() => MainNavigation(initialIndex: 1));
+    Get.to(() => MainNavigation(initialIndex: 2));
   }
 }

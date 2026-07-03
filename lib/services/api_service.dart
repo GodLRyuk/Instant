@@ -27,8 +27,6 @@ class ApiService {
         data: LoginModel(email: email, password: password).toJson(),
         options: Options(headers: {'Content-Type': 'application/json'}),
       );
-      print("Login Response: ${response.data}");
-      print("Status Code: ${email}, ${password}");
       if (response.data is Map<String, dynamic>) {
         final data = response.data;
 
@@ -44,6 +42,11 @@ class ApiService {
         await prefs.setString('phone', data['phone'] ?? '');
         await prefs.setString('role', data['role'] ?? '');
         await prefs.setString('profile_image', data['profile_image'] ?? '');
+
+        final fcmToken = prefs.getString('fcm_token');
+        if (fcmToken != null && fcmToken.isNotEmpty) {
+          await saveDeviceToken(fcmToken);
+        }
 
         return data;
       } else {
@@ -352,6 +355,10 @@ class ApiService {
     String? couponCode,
     String? currentLat,
     String? currentLng,
+    String deliveryType = 'ASAP', // 👈 add
+    String? scheduledDate, // 👈 add
+    String? scheduledSlotStart, // 👈 add
+    String? scheduledSlotEnd, // 👈 add
   }) async {
     final response = await _dio.post(
       "/orders/create/",
@@ -361,10 +368,16 @@ class ApiService {
         "total_amount": totalAmount,
         "payment_method": paymentMethod,
         "payment_status": paymentStatus,
+        "delivery_type": deliveryType, // 👈 add
         if (couponCode != null && couponCode.isNotEmpty)
           "coupon_code": couponCode,
         if (currentLat != null) "current_lat": double.tryParse(currentLat),
         if (currentLng != null) "current_lng": double.tryParse(currentLng),
+        if (scheduledDate != null) "scheduled_date": scheduledDate, // 👈 add
+        if (scheduledSlotStart != null)
+          "scheduled_slot_start": scheduledSlotStart, // 👈 add
+        if (scheduledSlotEnd != null)
+          "scheduled_slot_end": scheduledSlotEnd, // 👈 add
       },
     );
     return {"data": response.data, "statusCode": response.statusCode};
@@ -454,5 +467,89 @@ class ApiService {
       },
     );
     return {"data": response.data, "statusCode": response.statusCode};
+  }
+
+  // ================= WISHLIST =================
+  Future<List<dynamic>> getWishlist() async {
+    try {
+      final response = await _dio.get('/wishlist/');
+      if (response.statusCode == 200) {
+        return response.data;
+      }
+      return [];
+    } on DioException catch (e) {
+      throw Exception(e.response?.data['message'] ?? "Wishlist fetch error");
+    }
+  }
+
+  Future<bool> addToWishlist(int productId) async {
+    try {
+      final response = await _dio.post(
+        '/wishlist/',
+        data: {"product_id": productId},
+      );
+      return response.statusCode == 201;
+    } on DioException catch (e) {
+      throw Exception(e.response?.data['message'] ?? "Add to wishlist error");
+    }
+  }
+
+  Future<bool> removeFromWishlist(int productId) async {
+    try {
+      final response = await _dio.delete(
+        '/wishlist/',
+        data: {"product_id": productId},
+      );
+      return response.statusCode == 200;
+    } on DioException catch (e) {
+      throw Exception(e.response?.data['message'] ?? "Remove wishlist error");
+    }
+  }
+
+  Future<Map<String, dynamic>> purchasePass({required String planType}) async {
+    try {
+      final response = await _dio.post(
+        '/promotions/pass/purchase/',
+        data: {'plan_type': planType},
+      );
+      return {"data": response.data, "statusCode": response.statusCode};
+    } on DioException catch (e) {
+      throw Exception(e.response?.data['error'] ?? "Pass purchase failed");
+    }
+  }
+
+  Future<Map<String, dynamic>> getPassStatus() async {
+    try {
+      final response = await _dio.get('/promotions/pass/status/');
+      return response.data;
+    } on DioException catch (e) {
+      throw Exception(
+        e.response?.data['error'] ?? "Failed to fetch pass status",
+      );
+    }
+  }
+
+  Future<List<dynamic>> getDeliverySlots() async {
+    try {
+      final response = await _dio.get('/orders/slots/');
+      if (response.statusCode == 200) {
+        return response.data;
+      }
+      return [];
+    } on DioException catch (e) {
+      throw Exception(e.response?.data['message'] ?? "Slots fetch error");
+    }
+  }
+
+  Future<void> saveDeviceToken(String token) async {
+    try {
+      final response = await _dio.post(
+        '/accounts/save-device-token/',
+        data: {'fcm_token': token},
+      );
+      print('Token saved: ${response.data}');
+    } on DioException catch (e) {
+      print('Failed to save token: ${e.response?.data ?? e.message}');
+    }
   }
 }

@@ -11,6 +11,10 @@ class PaymentPage extends StatefulWidget {
   final String? couponCode;
   final String? currentLat;
   final String? currentLng;
+  final String deliveryType;
+  final String? scheduledDate;
+  final String? scheduledSlotStart;
+  final String? scheduledSlotEnd;
 
   const PaymentPage({
     super.key,
@@ -20,6 +24,10 @@ class PaymentPage extends StatefulWidget {
     this.couponCode,
     this.currentLat,
     this.currentLng,
+    this.deliveryType = 'ASAP',
+    this.scheduledDate,
+    this.scheduledSlotStart,
+    this.scheduledSlotEnd,
   });
 
   @override
@@ -114,6 +122,11 @@ class _PaymentPageState extends State<PaymentPage> {
                     couponCode: widget.couponCode,
                     currentLat: widget.currentLat,
                     currentLng: widget.currentLng,
+                    // ✅ add these
+                    deliveryType: widget.deliveryType,
+                    scheduledDate: widget.scheduledDate,
+                    scheduledSlotStart: widget.scheduledSlotStart,
+                    scheduledSlotEnd: widget.scheduledSlotEnd,
                   );
                 },
                 child: Text(

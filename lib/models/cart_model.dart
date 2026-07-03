@@ -19,8 +19,9 @@ class CartItem {
   final String product;
   final int quantity;
   final double price;
-  final double total;
-  final String? image; // ✅ NEW FIELD
+  final double total; // ← was missing
+  final int totalStock; // ← fixed
+  final String? image;
 
   CartItem({
     required this.product_id,
@@ -28,6 +29,7 @@ class CartItem {
     required this.quantity,
     required this.price,
     required this.total,
+    required this.totalStock, // ← fixed
     this.image,
   });
 
@@ -38,7 +40,8 @@ class CartItem {
       quantity: json['quantity'],
       price: (json['price'] as num).toDouble(),
       total: (json['total'] as num).toDouble(),
-      image: json['image'], // ✅ parse image
+      totalStock: json['total_stock'] ?? 0, // ← fixed, parsed here
+      image: json['image'],
     );
   }
 }

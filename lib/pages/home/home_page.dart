@@ -292,22 +292,28 @@ class _HomePageState extends State<HomePage> {
                     height: height * 0.2,
                     child: Center(child: CircularProgressIndicator()),
                   );
-                } else {
-                  // Show the first banner from the list
-                  final banner = topBannerController.topbannerList[0];
-
-                  return Container(
-                    margin: EdgeInsets.symmetric(horizontal: width * 0.04),
-                    height: height * 0.2,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(width * 0.04),
-                      image: DecorationImage(
-                        image: NetworkImage(banner.image), // <-- API image here
-                        fit: BoxFit.fill,
-                      ),
-                    ),
-                  );
                 }
+
+                // Guard against empty list
+                if (topBannerController.topbannerList.isEmpty) {
+                  return SizedBox(
+                    height: height * 0.2,
+                  ); // or a placeholder widget
+                }
+
+                final banner = topBannerController.topbannerList[0];
+
+                return Container(
+                  margin: EdgeInsets.symmetric(horizontal: width * 0.04),
+                  height: height * 0.2,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(width * 0.04),
+                    image: DecorationImage(
+                      image: NetworkImage(banner.image),
+                      fit: BoxFit.fill,
+                    ),
+                  ),
+                );
               }),
               SizedBox(height: height * 0.015),
 

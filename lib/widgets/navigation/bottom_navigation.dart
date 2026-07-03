@@ -24,9 +24,9 @@ class _MainNavigationState extends State<MainNavigation> {
   final WishlistController wishlistController = Get.put(WishlistController());
   final List<Widget> _pages = [
     ProfilePage(),
+    OrderPage(),
     HomePage(),
     WishlistPage(),
-    OrderPage(),
     CartPage(),
   ];
 
@@ -63,9 +63,9 @@ class _MainNavigationState extends State<MainNavigation> {
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
           _buildNavItem(Icons.menu, 0),
-          _buildNavItem(Icons.home, 1),
-          _buildNavItem(Icons.favorite_border, 2),
-          _buildNavItem(Icons.local_shipping, 3),
+          _buildNavItem(Icons.local_shipping, 1),
+          _buildNavItem(Icons.home, 2),
+          _buildNavItem(Icons.favorite_border, 3),
           _buildNavItem(Icons.shopping_cart, 4),
         ],
       ),
@@ -119,11 +119,11 @@ class _MainNavigationState extends State<MainNavigation> {
       case 0:
         return "Menu";
       case 1:
-        return "Home";
-      case 2:
-        return "Wishlist";
-      case 3:
         return "Orders";
+      case 2:
+        return "Home";
+      case 3:
+        return "Wishlist";
       case 4:
         return "Cart";
       default:

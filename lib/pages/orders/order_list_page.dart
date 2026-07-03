@@ -8,6 +8,7 @@ class OrderPage extends StatelessWidget {
   OrderPage({super.key});
 
   final OrderController controller = Get.put(OrderController());
+  final OrderController orderController = Get.put(OrderController());
 
   Color getStatusColor(String status) {
     switch (status) {
@@ -127,7 +128,7 @@ class OrderPage extends StatelessWidget {
                             borderRadius: BorderRadius.circular(30),
                           ),
                           child: Text(
-                            status.toUpperCase(),
+                            order['order_status'].toUpperCase(),
                             style: TextStyle(
                               color: Colors.black,
                               fontWeight: FontWeight.w700,

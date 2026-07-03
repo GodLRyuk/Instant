@@ -5,22 +5,23 @@ import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'package:instant_delivery/controllers/address_controller.dart';
 import 'package:instant_delivery/controllers/coupon_controller.dart';
+import 'package:instant_delivery/controllers/pass_controller.dart';
 import 'package:instant_delivery/pages/cart/payment_page.dart';
+import 'package:instant_delivery/pages/membership/pass_purchase_screen.dart';
 import 'package:instant_delivery/services/location_service.dart'
     as LocationService;
 import 'package:instant_delivery/utils/delivery_charge.dart';
 import 'package:instant_delivery/widgets/navigation/custom_app_bar.dart';
 
 class CheckoutPage extends StatefulWidget {
-  /// Raw subtotal — before any discount.
   final double totalAmount;
   final List items;
-
-  /// Pre-applied from CartPage. Empty string = not yet applied.
   final String appliedCouponCode;
-
-  /// Pre-calculated discount from CartPage. 0.0 = none.
   final double discountAmount;
+  final String deliveryType;
+  final String? scheduledDate;
+  final String? scheduledSlotStart;
+  final String? scheduledSlotEnd;
 
   const CheckoutPage({
     super.key,
@@ -28,6 +29,10 @@ class CheckoutPage extends StatefulWidget {
     required this.items,
     this.appliedCouponCode = '',
     this.discountAmount = 0.0,
+    this.deliveryType = 'ASAP',
+    this.scheduledDate,
+    this.scheduledSlotStart,
+    this.scheduledSlotEnd,
   });
 
   @override
@@ -36,26 +41,24 @@ class CheckoutPage extends StatefulWidget {
 
 class _CheckoutPageState extends State<CheckoutPage> {
   final AddressController addressController = Get.put(AddressController());
+  final CouponController couponController = Get.put(CouponController());
+  final PassController passController = Get.put(PassController()); // ← add
 
   bool showAllItems = false;
 
-  // ── Coupon state (inline apply — only used when NOT pre-applied) ──
   final TextEditingController _couponCtrl = TextEditingController();
   bool _isApplyingCoupon = false;
   String _couponError = '';
   String _localCouponCode = '';
   double _localDiscount = 0.0;
-  final CouponController couponController = Get.put(CouponController());
+
   int get _totalQty => widget.items.fold<int>(
     0,
     (sum, item) => sum + (item['quantity'] as num).toInt(),
   );
-  // ── Helpers ───────────────────────────────────────────────────────
 
-  /// True when coupon was passed in from CartPage (read-only display).
   bool get _couponPreApplied => widget.appliedCouponCode.isNotEmpty;
 
-  /// Whichever coupon is active (from cart OR applied inline here).
   String get _activeCouponCode {
     if (widget.appliedCouponCode.isNotEmpty) return widget.appliedCouponCode;
     if (couponController.appliedCode.value.isNotEmpty) {
@@ -67,14 +70,22 @@ class _CheckoutPageState extends State<CheckoutPage> {
   double get _activeDiscount =>
       _couponPreApplied ? widget.discountAmount : _localDiscount;
 
-  /// Delivery is calculated on the discounted subtotal.
-  double get deliveryCharge =>
-      DeliveryCharge.calculate(widget.totalAmount - _activeDiscount);
+  // ── Delivery fee — free if pass active and subtotal ≥ min ────────
+  double get deliveryCharge {
+    final subtotal = widget.totalAmount - _activeDiscount;
+    final minOrder = passController.freeDeliveryMinOrder.value;
+
+    if (passController.hasPass.value && subtotal >= minOrder) {
+      return 0.0; // ✅ free with pass
+    }
+    return DeliveryCharge.calculate(subtotal);
+  }
 
   double get finalAmount =>
       (widget.totalAmount - _activeDiscount) +
       deliveryCharge -
       couponController.discountAmount.value;
+
   double get subtotal => widget.totalAmount + deliveryCharge;
 
   @override
@@ -98,7 +109,6 @@ class _CheckoutPageState extends State<CheckoutPage> {
     });
   }
 
-  // ── Build ─────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
@@ -118,7 +128,10 @@ class _CheckoutPageState extends State<CheckoutPage> {
               child: SingleChildScrollView(
                 child: Column(
                   children: [
-                    /// 🔴 ADDRESS SECTION
+                    // ── PASS BANNER ────────────────────────────
+                    _buildPassBanner(width),
+
+                    /// ADDRESS SECTION
                     Container(
                       margin: EdgeInsets.all(width * 0.04),
                       padding: EdgeInsets.all(width * 0.04),
@@ -156,21 +169,18 @@ class _CheckoutPageState extends State<CheckoutPage> {
                             ],
                           ),
                           const SizedBox(height: 12),
-
                           Obx(() {
                             if (addressController.isLoading.value) {
                               return const Center(
                                 child: CircularProgressIndicator(),
                               );
                             }
-
                             if (addressController.addressList.isEmpty) {
                               return const Text(
                                 "No Address Found",
                                 style: TextStyle(color: Colors.white70),
                               );
                             }
-
                             return Column(
                               children: addressController.addressList.map((
                                 address,
@@ -181,7 +191,6 @@ class _CheckoutPageState extends State<CheckoutPage> {
                                         .value
                                         ?.id ==
                                     address.id;
-
                                 return GestureDetector(
                                   onTap: () =>
                                       addressController.selectAddress(address),
@@ -222,7 +231,6 @@ class _CheckoutPageState extends State<CheckoutPage> {
                               }).toList(),
                             );
                           }),
-
                           const SizedBox(height: 10),
                           Row(
                             children: [
@@ -240,7 +248,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
                       ),
                     ),
 
-                    /// 🧾 ORDER SUMMARY
+                    /// ORDER SUMMARY
                     Container(
                       margin: EdgeInsets.symmetric(horizontal: width * 0.04),
                       padding: EdgeInsets.all(width * 0.04),
@@ -266,7 +274,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
                           ),
                           const SizedBox(height: 12),
 
-                          /// Items list with show-more
+                          // Items list
                           Column(
                             children: [
                               ...List.generate(
@@ -277,14 +285,12 @@ class _CheckoutPageState extends State<CheckoutPage> {
                                   final item = showAllItems
                                       ? widget.items[index]
                                       : widget.items.take(3).toList()[index];
-
                                   final isLast =
                                       index ==
                                       (showAllItems
                                               ? widget.items.length
                                               : widget.items.take(3).length) -
                                           1;
-
                                   return Column(
                                     children: [
                                       Container(
@@ -348,7 +354,6 @@ class _CheckoutPageState extends State<CheckoutPage> {
                                   );
                                 },
                               ),
-
                               if (widget.items.length > 3)
                                 GestureDetector(
                                   onTap: () => setState(
@@ -382,40 +387,87 @@ class _CheckoutPageState extends State<CheckoutPage> {
 
                           const Divider(),
 
-                          /// 🎟 COUPON — inline apply (product-details flow)
+                          // Coupon section
                           if (!_couponPreApplied) ...[
                             _buildInlineCouponSection(),
                             const SizedBox(height: 10),
                           ],
 
-                          /// Delivery charge row
+                          // Delivery charge row
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               const Text("Delivery Charge"),
-                              Text(
-                                deliveryCharge == 0
-                                    ? "Free"
-                                    : "₹${deliveryCharge.toStringAsFixed(2)}",
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.green,
-                                ),
+                              Row(
+                                children: [
+                                  if (passController.hasPass.value &&
+                                      deliveryCharge == 0) ...[
+                                    Text(
+                                      "₹${DeliveryCharge.calculate(widget.totalAmount - _activeDiscount).toStringAsFixed(0)}",
+                                      style: const TextStyle(
+                                        color: Colors.grey,
+                                        fontSize: 12,
+                                        decoration: TextDecoration.lineThrough,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 6),
+                                  ],
+                                  Text(
+                                    deliveryCharge == 0
+                                        ? "FREE"
+                                        : "₹${deliveryCharge.toStringAsFixed(2)}",
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: deliveryCharge == 0
+                                          ? Colors.green
+                                          : Colors.black,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ],
                           ),
 
-                          if (deliveryCharge == 0)
-                            const Padding(
-                              padding: EdgeInsets.only(top: 6),
+                          // Pass free delivery badge
+                          if (passController.hasPass.value &&
+                              deliveryCharge == 0)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 6),
+                              child: Row(
+                                children: [
+                                  const Icon(
+                                    Icons.verified,
+                                    color: Colors.green,
+                                    size: 14,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    "Free delivery with your Pass 🎉",
+                                    style: TextStyle(
+                                      color: Colors.green.shade700,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+
+                          // Not enough for free delivery hint
+                          if (passController.hasPass.value &&
+                              deliveryCharge > 0) ...[
+                            Padding(
+                              padding: const EdgeInsets.only(top: 6),
                               child: Text(
-                                "🎉 You got FREE delivery!",
-                                style: TextStyle(
-                                  color: Colors.green,
+                                "Add ₹${(passController.freeDeliveryMinOrder.value - (widget.totalAmount - _activeDiscount)).toStringAsFixed(0)} more for free delivery",
+                                style: const TextStyle(
+                                  color: Colors.orange,
+                                  fontSize: 12,
                                   fontWeight: FontWeight.w500,
                                 ),
                               ),
                             ),
+                          ],
 
                           const Divider(),
                           Row(
@@ -446,7 +498,6 @@ class _CheckoutPageState extends State<CheckoutPage> {
                             ],
                           ),
                           const Divider(),
-
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
@@ -474,7 +525,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
               ),
             ),
 
-            /// 🟢 CONFIRM ORDER BUTTON
+            /// CONFIRM ORDER BUTTON
             Container(
               padding: EdgeInsets.all(width * 0.02),
               width: width * 0.9,
@@ -499,7 +550,6 @@ class _CheckoutPageState extends State<CheckoutPage> {
                             await LocationService.getCurrentAddress();
                         final String? lat = locationData["lat"];
                         final String? lng = locationData["lng"];
-
                         Get.to(
                           () => PaymentPage(
                             totalAmount: finalAmount,
@@ -508,8 +558,13 @@ class _CheckoutPageState extends State<CheckoutPage> {
                             couponCode: _activeCouponCode.isNotEmpty
                                 ? _activeCouponCode
                                 : null,
-                            currentLat: lat, // ✅ NEW
-                            currentLng: lng, // ✅ NEW
+                            currentLat: lat,
+                            currentLng: lng,
+                            // ✅ add these
+                            deliveryType: widget.deliveryType,
+                            scheduledDate: widget.scheduledDate,
+                            scheduledSlotStart: widget.scheduledSlotStart,
+                            scheduledSlotEnd: widget.scheduledSlotEnd,
                           ),
                         );
                       } catch (e) {
@@ -533,14 +588,111 @@ class _CheckoutPageState extends State<CheckoutPage> {
     );
   }
 
-  // ── Inline coupon widget (product-details flow only) ─────────────
+  // ── PASS BANNER ──────────────────────────────────────────────────
+  Widget _buildPassBanner(double width) {
+    // Has active pass
+    if (passController.hasPass.value) {
+      final subtotal = widget.totalAmount - _activeDiscount;
+      final minOrder = passController.freeDeliveryMinOrder.value;
+      final qualifies = subtotal >= minOrder;
+
+      return Container(
+        margin: EdgeInsets.fromLTRB(
+          width * 0.04,
+          width * 0.04,
+          width * 0.04,
+          0,
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: qualifies ? Colors.green.shade50 : Colors.orange.shade50,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: qualifies ? Colors.green.shade200 : Colors.orange.shade200,
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              qualifies ? Icons.verified : Icons.delivery_dining,
+              color: qualifies ? Colors.green : Colors.orange,
+              size: 20,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                qualifies
+                    ? "✅ Free delivery applied with your Pass!"
+                    : "Add ₹${(minOrder - subtotal).toStringAsFixed(0)} more for free delivery (Pass benefit)",
+                style: TextStyle(
+                  color: qualifies
+                      ? Colors.green.shade700
+                      : Colors.orange.shade700,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // No pass — show upsell banner
+    return GestureDetector(
+      onTap: () => Get.to(() => const PassPurchasePage()),
+      child: Container(
+        margin: EdgeInsets.fromLTRB(
+          width * 0.04,
+          width * 0.04,
+          width * 0.04,
+          0,
+        ),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Colors.green, Colors.lightGreen],
+          ),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.delivery_dining, color: Colors.white, size: 22),
+            const SizedBox(width: 10),
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "Get FREE delivery on every order!",
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                    ),
+                  ),
+                  SizedBox(height: 2),
+                  Text(
+                    "Delivery Pass from ₹99/month →",
+                    style: TextStyle(color: Colors.white70, fontSize: 12),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.arrow_forward_ios, color: Colors.white, size: 14),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── INLINE COUPON SECTION ────────────────────────────────────────
   Widget _buildInlineCouponSection() {
     return Obx(() {
       final isApplied = couponController.appliedCode.value.isNotEmpty;
       final isLoading = couponController.isLoading.value;
       final error = couponController.couponMessage.value;
 
-      /// Coupon successfully applied — show success chip + remove button
       if (isApplied) {
         return Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -574,8 +726,6 @@ class _CheckoutPageState extends State<CheckoutPage> {
                   ],
                 ),
               ),
-
-              /// ✕ Remove coupon
               GestureDetector(
                 onTap: _removeCoupon,
                 child: Container(
@@ -596,10 +746,75 @@ class _CheckoutPageState extends State<CheckoutPage> {
         );
       }
 
-      /// Not yet applied — show input + Apply button
+      // Not yet applied
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Members only hint
+          if (!passController.hasPass.value)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: GestureDetector(
+                onTap: () => Get.to(() => const PassPurchasePage()),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.amber.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.amber.shade200),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.lock, color: Colors.amber.shade700, size: 14),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          "Coupons available for Pass members only. Get Pass →",
+                          style: TextStyle(
+                            color: Colors.amber.shade800,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+
+          // Coupon unlock progress for members
+          if (passController.hasPass.value &&
+              widget.totalAmount < passController.couponUnlockAt.value) ...[
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: LinearProgressIndicator(
+                      value:
+                          widget.totalAmount /
+                          passController.couponUnlockAt.value,
+                      backgroundColor: Colors.grey.shade200,
+                      color: Colors.green,
+                      minHeight: 6,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    "Add ₹${(passController.couponUnlockAt.value - widget.totalAmount).toStringAsFixed(0)} more to unlock coupons",
+                    style: const TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                ],
+              ),
+            ),
+          ],
+
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -607,8 +822,18 @@ class _CheckoutPageState extends State<CheckoutPage> {
                 child: TextField(
                   controller: _couponCtrl,
                   textCapitalization: TextCapitalization.characters,
+                  enabled:
+                      passController.hasPass.value &&
+                      widget.totalAmount >= passController.couponUnlockAt.value,
                   decoration: InputDecoration(
-                    hintText: "Enter coupon code",
+                    hintText: !passController.hasPass.value
+                        ? "Available for Pass members"
+                        : widget.totalAmount <
+                              passController
+                                  .couponUnlockAt
+                                  .value // ✅ fix 1
+                        ? "Unlocks at ₹${passController.couponUnlockAt.value.toStringAsFixed(0)}"
+                        : "Enter coupon code",
                     hintStyle: TextStyle(color: Colors.grey.shade400),
                     prefixIcon: const Icon(
                       Icons.confirmation_number_outlined,
@@ -655,7 +880,13 @@ class _CheckoutPageState extends State<CheckoutPage> {
                     ),
                     padding: const EdgeInsets.symmetric(horizontal: 18),
                   ),
-                  onPressed: isLoading ? null : _applyCoupon,
+                  onPressed:
+                      (isLoading ||
+                          !passController.hasPass.value ||
+                          widget.totalAmount <
+                              passController.couponUnlockAt.value) // ✅ fix 2
+                      ? null
+                      : _applyCoupon,
                   child: isLoading
                       ? const SizedBox(
                           width: 18,
@@ -684,15 +915,12 @@ class _CheckoutPageState extends State<CheckoutPage> {
       couponController.couponMessage.value = 'Please enter a coupon code';
       return;
     }
-
     await couponController.applyCoupon(
       code: code,
-      orderTotal: widget.totalAmount, // raw subtotal before discount
-      totalQty: _totalQty, // sum of quantities from widget.items
+      orderTotal: widget.totalAmount,
+      totalQty: _totalQty,
     );
   }
-
-  // ── Widgets ──────────────────────────────────────────────────────
 
   Widget _addressButton(String title, IconData icon, VoidCallback onTap) {
     return GestureDetector(
@@ -715,7 +943,6 @@ class _CheckoutPageState extends State<CheckoutPage> {
     );
   }
 
-  // ── Add Address Bottom Sheet ──────────────────────────────────────
   void _showAddAddressSheet(BuildContext context) {
     final fullAddressCtrl = TextEditingController();
     final nameCtrl = TextEditingController();

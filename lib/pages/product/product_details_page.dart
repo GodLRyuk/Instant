@@ -6,6 +6,7 @@ import 'package:instant_delivery/controllers/wishlist_controller.dart';
 import 'package:instant_delivery/pages/cart/cart_page.dart';
 import 'package:instant_delivery/pages/cart/checkout_page.dart';
 import 'package:instant_delivery/pages/product/all_products.dart';
+import 'package:instant_delivery/services/api_service.dart';
 import 'package:instant_delivery/widgets/navigation/custom_app_bar.dart';
 
 class ProductDetailsPage extends StatefulWidget {
@@ -32,14 +33,22 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
   RxInt reviewCount = 0.obs;
   final WishlistController wishlistController = Get.put(WishlistController());
 
+  // ── Scheduling state (for Buy Now bottom sheet) ───────────────
+  String _deliveryType = 'ASAP';
+  List<dynamic> _slotDays = [];
+  bool _slotsLoading = true;
+  int _selectedDayIndex = 0;
+  String? _selectedSlotStart;
+  String? _selectedSlotEnd;
+
   @override
   void initState() {
     super.initState();
 
     currentProduct.value = widget.product;
     controller.loadProductReviews(widget.product.id);
+    _fetchSlots();
 
-    /// Recommended
     if (Get.isRegistered<ProductController>(tag: "rec")) {
       recommendedController = Get.find(tag: "rec");
     } else {
@@ -47,7 +56,6 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
       recommendedController.fetchRecommended();
     }
 
-    /// New Arrival
     if (Get.isRegistered<ProductController>(tag: "new")) {
       newArrivalController = Get.find(tag: "new");
     } else {
@@ -55,7 +63,6 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
       newArrivalController.fetchNewArrivals();
     }
 
-    /// ✅ FIX HERE
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
         _scrollController.animateTo(
@@ -65,6 +72,95 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
         );
       }
     });
+  }
+
+  // ── Slot helpers ──────────────────────────────────────────────
+  Future<void> _fetchSlots() async {
+    try {
+      final slots = await ApiService().getDeliverySlots();
+      setState(() {
+        _slotDays = slots;
+        _slotsLoading = false;
+      });
+    } catch (_) {
+      setState(() => _slotsLoading = false);
+    }
+  }
+
+  String _formatSlotTime(String time24) {
+    final parts = time24.split(':');
+    int hour = int.parse(parts[0]);
+    final minute = parts[1];
+    final period = hour >= 12 ? 'PM' : 'AM';
+    if (hour > 12) hour -= 12;
+    if (hour == 0) hour = 12;
+    return '$hour:$minute $period';
+  }
+
+  List<dynamic> get _currentSlots =>
+      _slotDays.isEmpty ? [] : (_slotDays[_selectedDayIndex]['slots'] ?? []);
+
+  String? _toBackendTime(String? t) {
+    if (t == null) return null;
+    if (!t.contains('AM') && !t.contains('PM')) {
+      return t.length == 5 ? '$t:00' : t;
+    }
+    final parts = t.split(' ');
+    final tp = parts[0].split(':');
+    int h = int.parse(tp[0]);
+    if (parts[1] == 'PM' && h != 12) h += 12;
+    if (parts[1] == 'AM' && h == 12) h = 0;
+    return '${h.toString().padLeft(2, '0')}:${tp[1]}:00';
+  }
+
+  // ── Buy Now bottom sheet ──────────────────────────────────────
+  void _showBuyNowSheet(dynamic product) {
+    // Reset state each time sheet opens
+    setState(() {
+      _deliveryType = 'ASAP';
+      _selectedSlotStart = null;
+      _selectedSlotEnd = null;
+      _selectedDayIndex = 0;
+    });
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _BuyNowScheduleSheet(
+        product: product,
+        quantity: quantity.value,
+        slotDays: _slotDays,
+        slotsLoading: _slotsLoading,
+        formatSlotTime: _formatSlotTime,
+        toBackendTime: _toBackendTime,
+        onConfirm: (scheduleData) {
+          Navigator.pop(context);
+          final items = [
+            {
+              "product": product.id,
+              "name": product.name,
+              "price": product.discounted_price,
+              "quantity": quantity.value,
+              "image": product.image,
+            },
+          ];
+          Get.to(
+            () => CheckoutPage(
+              totalAmount:
+                  (product.discounted_price as num).toDouble() * quantity.value,
+              items: items,
+              appliedCouponCode: '',
+              discountAmount: 0.0,
+              deliveryType: scheduleData['deliveryType'] ?? 'ASAP',
+              scheduledDate: scheduleData['scheduledDate'],
+              scheduledSlotStart: scheduleData['scheduledSlotStart'],
+              scheduledSlotEnd: scheduleData['scheduledSlotEnd'],
+            ),
+          );
+        },
+      ),
+    );
   }
 
   bool isInCart(int productId) {
@@ -79,12 +175,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
       builder: (context) {
         return const SizedBox.expand(
           child: ColoredBox(
-            color: Color.fromARGB(
-              135,
-              255,
-              255,
-              255,
-            ), // semi-transparent overlay
+            color: Color.fromARGB(135, 255, 255, 255),
             child: Center(
               child: CircularProgressIndicator(
                 color: Color.fromARGB(255, 0, 0, 0),
@@ -98,15 +189,11 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
     await Future.delayed(const Duration(seconds: 3));
     Navigator.of(context).pop();
 
-    // Update main product
     currentProduct.value = null;
-
     await Future.delayed(const Duration(milliseconds: 100));
-
     currentProduct.value = product;
     quantity.value = 1;
 
-    // Scroll to top
     _scrollController.animateTo(
       0,
       duration: const Duration(milliseconds: 400),
@@ -114,6 +201,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
     );
   }
 
+  // ── Build ─────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -280,8 +368,10 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
               ),
 
               SizedBox(height: height * 0.015),
+
+              /// DESCRIPTION
               Container(
-                width: double.infinity, // 👈 ensures full width
+                width: double.infinity,
                 margin: EdgeInsets.symmetric(horizontal: width * 0.04),
                 padding: EdgeInsets.all(width * 0.04),
                 decoration: BoxDecoration(
@@ -290,13 +380,13 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min, // 👈 important
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     const Text(
                       "Description",
                       style: TextStyle(fontWeight: FontWeight.bold),
                     ),
-                    SizedBox(height: 8),
+                    const SizedBox(height: 8),
                     Text(
                       product.description ?? "No description available",
                       style: TextStyle(color: Colors.grey[700]),
@@ -304,6 +394,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                   ],
                 ),
               ),
+
               SizedBox(height: height * 0.015),
 
               /// QUANTITY
@@ -331,22 +422,25 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                             "Quantity",
                             style: TextStyle(fontWeight: FontWeight.bold),
                           ),
-                          Row(
-                            children: [
-                              IconButton(
-                                onPressed: () {
-                                  if (quantity.value > 1) quantity.value--;
-                                },
-                                icon: const Icon(Icons.remove),
-                              ),
-                              Text(quantity.value.toString()),
-                              IconButton(
-                                onPressed: () {
-                                  if (quantity.value < stock) quantity.value++;
-                                },
-                                icon: const Icon(Icons.add),
-                              ),
-                            ],
+                          Obx(
+                            () => Row(
+                              children: [
+                                IconButton(
+                                  onPressed: () {
+                                    if (quantity.value > 1) quantity.value--;
+                                  },
+                                  icon: const Icon(Icons.remove),
+                                ),
+                                Text(quantity.value.toString()),
+                                IconButton(
+                                  onPressed: () {
+                                    if (quantity.value < stock)
+                                      quantity.value++;
+                                  },
+                                  icon: const Icon(Icons.add),
+                                ),
+                              ],
+                            ),
                           ),
                         ],
                       ),
@@ -359,34 +453,56 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                 padding: EdgeInsets.symmetric(horizontal: width * 0.04),
                 child: Row(
                   children: [
+                    // Add to Cart / Go to Cart
                     Expanded(
                       child: Obx(() {
                         final added = isInCart(product.id);
+                        final outOfStock = (product.stock ?? 0) == 0;
+
                         return GestureDetector(
                           onTap: () async {
+                            if (outOfStock) {
+                              return; // do nothing if out of stock
+                            }
+
                             if (added) {
                               Get.to(() => CartPage());
                             } else {
-                              await cartController.addToCart(
+                              // ✅ Only update button state and cart if API returns 200
+                              final success = await cartController.addToCart(
                                 product.id,
                                 quantity.value,
                               );
-                              await cartController.fetchCart();
+                              if (success) {
+                                await cartController
+                                    .fetchCart(); // refresh cart list so isInCart() becomes true
+                              }
+                              // If success == false: snackbar already shown by controller,
+                              // button stays green "Add to Cart", no state change.
                             }
                           },
                           child: Container(
                             height: 50,
                             decoration: BoxDecoration(
-                              color: added
+                              // Only show orange "Go to Cart" colour when actually in cart AND has stock
+                              color: added && !outOfStock
                                   ? Colors.orange
                                   : Colors.green.shade100,
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Center(
                               child: Text(
-                                added ? "Go to Cart" : "Add to Cart",
+                                outOfStock
+                                    ? "Out of Stock"
+                                    : added
+                                    ? "Go to Cart"
+                                    : "Add to Cart",
                                 style: TextStyle(
-                                  color: added ? Colors.white : Colors.green,
+                                  color: outOfStock
+                                      ? Colors.grey
+                                      : added
+                                      ? Colors.white
+                                      : Colors.green,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
@@ -396,44 +512,43 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                       }),
                     ),
                     const SizedBox(width: 10),
+                    // Buy Now — opens scheduling bottom sheet
                     Expanded(
-                      child: GestureDetector(
-                        onTap: () async {
-                          // Go to checkout instead of cart
-                          Get.to(
-                            () => CheckoutPage(
-                              totalAmount:
-                                  product.discounted_price * quantity.value,
-                              items: [
-                                {
-                                  "product": product.id,
-                                  "name": product.name,
-                                  "price": product.discounted_price,
-                                  "quantity": quantity.value,
-                                  "image": product.image,
-                                },
-                              ],
+                      child: Builder(
+                        builder: (_) {
+                          final outOfStock = (product.stock ?? 0) == 0;
+                          return GestureDetector(
+                            onTap: outOfStock
+                                ? null
+                                : () => _showBuyNowSheet(product),
+                            child: Container(
+                              height: 50,
+                              decoration: BoxDecoration(
+                                gradient: outOfStock
+                                    ? null
+                                    : LinearGradient(
+                                        colors: [
+                                          Colors.green,
+                                          Colors.green.shade700,
+                                        ],
+                                      ),
+                                color: outOfStock ? Colors.grey.shade300 : null,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Center(
+                                child: Text(
+                                  outOfStock ? "Buy Now" : "Buy Now",
+                                  style: TextStyle(
+                                    color: outOfStock
+                                        ? Colors.grey.shade500
+                                        : Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
                             ),
                           );
                         },
-                        child: Container(
-                          height: 50,
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [Colors.green, Colors.green.shade700],
-                            ),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: const Center(
-                            child: Text(
-                              "Buy Now",
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ),
                       ),
                     ),
                   ],
@@ -441,9 +556,8 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
               ),
 
               SizedBox(height: height * 0.02),
-              SizedBox(height: height * 0.015),
 
-              _buildReviewsSection(product.id), // 🔥 ADD THIS
+              _buildReviewsSection(product.id),
 
               SizedBox(height: height * 0.02),
 
@@ -466,6 +580,8 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
               ),
             ],
           ),
+
+          // Wishlist heart
           Positioned(
             top: 4,
             right: 4,
@@ -478,7 +594,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                   decoration: BoxDecoration(
                     color: Colors.white,
                     shape: BoxShape.circle,
-                    boxShadow: [
+                    boxShadow: const [
                       BoxShadow(color: Colors.black12, blurRadius: 4),
                     ],
                   ),
@@ -488,7 +604,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                         : Icons.favorite_border,
                     size: 20,
                     color: wishlistController.isWishlisted(product.id)
-                        ? Color(0xFFE0386A)
+                        ? const Color(0xFFE0386A)
                         : Colors.grey,
                   ),
                 ),
@@ -500,13 +616,13 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
     );
   }
 
-  /// 🔥 Horizontal product list builder
+  // ── Horizontal product list ───────────────────────────────────
   Widget _buildHorizontalList(String title, List list, String tag) {
     final size = MediaQuery.of(context).size;
     final width = size.width;
     final height = size.height;
 
-    ProductController controller = tag == "rec"
+    ProductController ctrl = tag == "rec"
         ? recommendedController
         : newArrivalController;
 
@@ -535,7 +651,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
         SizedBox(
           height: height * 0.28,
           child: Obx(() {
-            if (controller.isLoading.value) {
+            if (ctrl.isLoading.value) {
               return const Center(child: CircularProgressIndicator());
             }
             if (list.isEmpty) {
@@ -550,13 +666,9 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                 return GestureDetector(
                   onTap: () async {
                     currentProduct.value = null;
-
-                    await this.controller.loadProductReviews(item.id);
-
+                    await controller.loadProductReviews(item.id);
                     currentProduct.value = item;
-
                     quantity.value = 1;
-
                     _scrollController.animateTo(
                       0,
                       duration: const Duration(milliseconds: 400),
@@ -668,7 +780,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                                 decoration: BoxDecoration(
                                   color: Colors.white,
                                   shape: BoxShape.circle,
-                                  boxShadow: [
+                                  boxShadow: const [
                                     BoxShadow(
                                       color: Colors.black12,
                                       blurRadius: 4,
@@ -682,7 +794,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                                   size: 16,
                                   color:
                                       wishlistController.isWishlisted(item.id)
-                                      ? Color(0xFFE0386A)
+                                      ? const Color(0xFFE0386A)
                                       : Colors.grey,
                                 ),
                               ),
@@ -701,6 +813,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
     );
   }
 
+  // ── Reviews section ───────────────────────────────────────────
   Widget _buildReviewsSection(dynamic product) {
     return Obx(() {
       final reviews = controller.reviews;
@@ -714,15 +827,11 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            /// TITLE
             Text(
               "Reviews (${reviews.length})",
               style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
             ),
-
             const SizedBox(height: 10),
-
-            /// AVERAGE RATING (from product)
             Row(
               children: [
                 const Icon(Icons.star, color: Colors.orange, size: 20),
@@ -733,10 +842,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                 ),
               ],
             ),
-
             const SizedBox(height: 15),
-
-            /// REVIEWS LIST
             reviews.isEmpty
                 ? const Text(
                     "No reviews yet",
@@ -746,11 +852,9 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
                     itemCount: reviews.length,
-                    separatorBuilder: (context, index) =>
-                        const SizedBox(height: 10),
+                    separatorBuilder: (_, __) => const SizedBox(height: 10),
                     itemBuilder: (context, index) {
                       final r = reviews[index];
-
                       return Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
@@ -760,7 +864,6 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            /// AVATAR
                             CircleAvatar(
                               backgroundColor: Colors.green,
                               child: Text(
@@ -768,25 +871,18 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                                 style: const TextStyle(color: Colors.white),
                               ),
                             ),
-
                             const SizedBox(width: 10),
-
-                            /// CONTENT
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  /// USER NAME
                                   Text(
                                     r['user_name'] ?? "Unknown",
                                     style: const TextStyle(
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),
-
                                   const SizedBox(height: 4),
-
-                                  /// COMMENT
                                   Text(
                                     r['comment'] ?? "",
                                     style: const TextStyle(
@@ -796,8 +892,6 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                                 ],
                               ),
                             ),
-
-                            /// RATING
                             Row(
                               children: [
                                 const Icon(
@@ -818,5 +912,510 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
         ),
       );
     });
+  }
+}
+
+// ── Buy Now Schedule Bottom Sheet ─────────────────────────────────
+class _BuyNowScheduleSheet extends StatefulWidget {
+  final dynamic product;
+  final int quantity;
+  final List<dynamic> slotDays;
+  final bool slotsLoading;
+  final String Function(String) formatSlotTime;
+  final String? Function(String?) toBackendTime;
+  final void Function(Map<String, String?>) onConfirm;
+
+  const _BuyNowScheduleSheet({
+    required this.product,
+    required this.quantity,
+    required this.slotDays,
+    required this.slotsLoading,
+    required this.formatSlotTime,
+    required this.toBackendTime,
+    required this.onConfirm,
+  });
+
+  @override
+  State<_BuyNowScheduleSheet> createState() => _BuyNowScheduleSheetState();
+}
+
+class _BuyNowScheduleSheetState extends State<_BuyNowScheduleSheet> {
+  String _deliveryType = 'ASAP';
+  int _selectedDayIndex = 0;
+  String? _selectedSlotStart;
+  String? _selectedSlotEnd;
+
+  List<dynamic> get _currentSlots => widget.slotDays.isEmpty
+      ? []
+      : (widget.slotDays[_selectedDayIndex]['slots'] ?? []);
+
+  bool get _canConfirm =>
+      _deliveryType == 'ASAP' ||
+      (_selectedSlotStart != null && _selectedSlotEnd != null);
+
+  @override
+  Widget build(BuildContext context) {
+    return DraggableScrollableSheet(
+      initialChildSize: 0.6,
+      minChildSize: 0.4,
+      maxChildSize: 0.92,
+      expand: false,
+      builder: (_, scrollController) {
+        return Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: Column(
+            children: [
+              // Drag handle
+              Container(
+                margin: const EdgeInsets.only(top: 10, bottom: 6),
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+
+              // Header
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.local_shipping_outlined,
+                      color: Color(0xFF3CB549),
+                    ),
+                    const SizedBox(width: 8),
+                    const Text(
+                      'Choose Delivery',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const Spacer(),
+                    // Price summary
+                    Text(
+                      '₹${((widget.product.discounted_price as num) * widget.quantity).toStringAsFixed(0)}',
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF2E7D32),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const Divider(height: 1),
+
+              Expanded(
+                child: SingleChildScrollView(
+                  controller: scrollController,
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // ── TOGGLE ──
+                      Row(
+                        children: [
+                          _toggleBtn(
+                            'ASAP',
+                            Icons.bolt,
+                            'Instant',
+                            '20–30 min',
+                          ),
+                          const SizedBox(width: 8),
+                          _toggleBtn(
+                            'SCHEDULED',
+                            Icons.calendar_month,
+                            'Schedule',
+                            'Pick date & time',
+                          ),
+                        ],
+                      ),
+
+                      // ── ASAP INFO ──
+                      if (_deliveryType == 'ASAP') ...[
+                        const SizedBox(height: 14),
+                        Container(
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFE8F5E9),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: const Color(0xFFA5D6A7)),
+                          ),
+                          child: const Row(
+                            children: [
+                              Icon(
+                                Icons.delivery_dining,
+                                color: Color(0xFF3CB549),
+                                size: 22,
+                              ),
+                              SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Arriving in 20–30 min',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                        color: Color(0xFF1B5E20),
+                                      ),
+                                    ),
+                                    SizedBox(height: 2),
+                                    Text(
+                                      'Estimated based on your location',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Color(0xFF388E3C),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+
+                      // ── SCHEDULED PICKERS ──
+                      if (_deliveryType == 'SCHEDULED') ...[
+                        const SizedBox(height: 14),
+                        if (widget.slotsLoading)
+                          const Center(
+                            child: Padding(
+                              padding: EdgeInsets.all(20),
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                          )
+                        else ...[
+                          // Date
+                          const Row(
+                            children: [
+                              Icon(
+                                Icons.calendar_month,
+                                color: Color(0xFF3CB549),
+                                size: 16,
+                              ),
+                              SizedBox(width: 4),
+                              Text(
+                                'Select date',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          SizedBox(
+                            height: 62,
+                            child: ListView.builder(
+                              scrollDirection: Axis.horizontal,
+                              itemCount: widget.slotDays.length,
+                              itemBuilder: (_, i) {
+                                final day = widget.slotDays[i];
+                                final isSelected = _selectedDayIndex == i;
+                                final label = day['is_today'] == true
+                                    ? 'Today'
+                                    : day['day'];
+                                final dateNum = (day['date'] as String)
+                                    .split('-')
+                                    .last;
+
+                                return GestureDetector(
+                                  onTap: () => setState(() {
+                                    _selectedDayIndex = i;
+                                    _selectedSlotStart = null;
+                                    _selectedSlotEnd = null;
+                                  }),
+                                  child: AnimatedContainer(
+                                    duration: const Duration(milliseconds: 150),
+                                    margin: const EdgeInsets.only(right: 8),
+                                    width: 52,
+                                    decoration: BoxDecoration(
+                                      color: isSelected
+                                          ? const Color(0xFFE8F5E9)
+                                          : Colors.white,
+                                      borderRadius: BorderRadius.circular(10),
+                                      border: Border.all(
+                                        color: isSelected
+                                            ? const Color(0xFFA5D6A7)
+                                            : Colors.grey.shade300,
+                                      ),
+                                    ),
+                                    child: Column(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        Text(
+                                          label.toString().substring(0, 3),
+                                          style: TextStyle(
+                                            fontSize: 10,
+                                            color: isSelected
+                                                ? const Color(0xFF2E7D32)
+                                                : Colors.grey,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          dateNum,
+                                          style: TextStyle(
+                                            fontSize: 15,
+                                            fontWeight: FontWeight.w600,
+                                            color: isSelected
+                                                ? const Color(0xFF2E7D32)
+                                                : Colors.black87,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+
+                          const SizedBox(height: 14),
+
+                          // Time slots
+                          Row(
+                            children: [
+                              const Icon(
+                                Icons.access_time,
+                                color: Color(0xFF3CB549),
+                                size: 16,
+                              ),
+                              const SizedBox(width: 4),
+                              const Text(
+                                'Select time slot',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFE8F5E9),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Text(
+                                  '${_currentSlots.where((s) => s['available'] == true).length} available',
+                                  style: const TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color(0xFF2E7D32),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          GridView.builder(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            gridDelegate:
+                                const SliverGridDelegateWithFixedCrossAxisCount(
+                                  crossAxisCount: 2,
+                                  childAspectRatio: 3.2,
+                                  crossAxisSpacing: 6,
+                                  mainAxisSpacing: 6,
+                                ),
+                            itemCount: _currentSlots.length,
+                            itemBuilder: (_, i) {
+                              final slot = _currentSlots[i];
+                              final isAvailable = slot['available'] == true;
+                              final slotStart = slot['slot_start'] as String;
+                              final slotEnd = slot['slot_end'] as String;
+                              final isSelected =
+                                  _selectedSlotStart == slotStart;
+
+                              return GestureDetector(
+                                onTap: isAvailable
+                                    ? () => setState(() {
+                                        _selectedSlotStart = slotStart;
+                                        _selectedSlotEnd = slotEnd;
+                                      })
+                                    : null,
+                                child: AnimatedContainer(
+                                  duration: const Duration(milliseconds: 150),
+                                  alignment: Alignment.center,
+                                  decoration: BoxDecoration(
+                                    color: isSelected
+                                        ? const Color(0xFFE8F5E9)
+                                        : isAvailable
+                                        ? Colors.white
+                                        : Colors.grey.shade100,
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                      color: isSelected
+                                          ? const Color(0xFFA5D6A7)
+                                          : Colors.grey.shade300,
+                                    ),
+                                  ),
+                                  child: Text(
+                                    '${widget.formatSlotTime(slotStart)} – ${widget.formatSlotTime(slotEnd)}',
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: isSelected
+                                          ? FontWeight.w600
+                                          : FontWeight.normal,
+                                      color: isSelected
+                                          ? const Color(0xFF2E7D32)
+                                          : isAvailable
+                                          ? Colors.black87
+                                          : Colors.grey.shade400,
+                                      decoration: isAvailable
+                                          ? null
+                                          : TextDecoration.lineThrough,
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ],
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+
+              // ── CONFIRM BUTTON ──
+              Padding(
+                padding: EdgeInsets.fromLTRB(
+                  16,
+                  8,
+                  16,
+                  MediaQuery.of(context).padding.bottom + 12,
+                ),
+                child: SizedBox(
+                  width: double.infinity,
+                  height: 52,
+                  child: ElevatedButton.icon(
+                    onPressed: _canConfirm
+                        ? () {
+                            if (_deliveryType == 'SCHEDULED' &&
+                                (_selectedSlotStart == null ||
+                                    _selectedSlotEnd == null)) {
+                              Get.snackbar(
+                                'Select a time slot',
+                                'Please pick a date and time slot',
+                                snackPosition: SnackPosition.BOTTOM,
+                              );
+                              return;
+                            }
+                            widget.onConfirm({
+                              'deliveryType': _deliveryType,
+                              'scheduledDate': _deliveryType == 'SCHEDULED'
+                                  ? widget.slotDays[_selectedDayIndex]['date']
+                                  : null,
+                              'scheduledSlotStart': widget.toBackendTime(
+                                _selectedSlotStart,
+                              ),
+                              'scheduledSlotEnd': widget.toBackendTime(
+                                _selectedSlotEnd,
+                              ),
+                            });
+                          }
+                        : null,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF3CB549),
+                      disabledBackgroundColor: Colors.grey.shade300,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                    icon: Icon(
+                      _deliveryType == 'ASAP'
+                          ? Icons.check_circle_outline
+                          : Icons.calendar_month,
+                      color: Colors.white,
+                      size: 18,
+                    ),
+                    label: Text(
+                      _deliveryType == 'ASAP'
+                          ? 'Confirm — Instant delivery'
+                          : _selectedSlotStart != null
+                          ? 'Confirm — ${widget.slotDays[_selectedDayIndex]['is_today'] == true ? 'Today' : widget.slotDays[_selectedDayIndex]['day']} ${widget.formatSlotTime(_selectedSlotStart!)}'
+                          : 'Select a time slot',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _toggleBtn(String type, IconData icon, String label, String sub) {
+    final isActive = _deliveryType == type;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => setState(() {
+          _deliveryType = type;
+          _selectedSlotStart = null;
+          _selectedSlotEnd = null;
+        }),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          decoration: BoxDecoration(
+            color: isActive ? const Color(0xFFE8F5E9) : Colors.white,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: isActive ? const Color(0xFFA5D6A7) : Colors.grey.shade300,
+            ),
+          ),
+          child: Column(
+            children: [
+              Icon(
+                icon,
+                color: isActive ? const Color(0xFF2E7D32) : Colors.grey,
+                size: 20,
+              ),
+              const SizedBox(height: 3),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: isActive ? const Color(0xFF2E7D32) : Colors.grey,
+                ),
+              ),
+              Text(
+                sub,
+                style: TextStyle(
+                  fontSize: 10,
+                  color: isActive
+                      ? const Color(0xFF388E3C)
+                      : Colors.grey.shade400,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }

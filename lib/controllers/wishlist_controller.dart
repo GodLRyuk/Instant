@@ -1,28 +1,57 @@
 import 'package:get/get.dart';
-import 'package:instant_delivery/models/product_model.dart'; // adjust to your model path
+import 'package:instant_delivery/models/product_model.dart';
+import 'package:instant_delivery/services/api_service.dart';
 
 class WishlistController extends GetxController {
   final RxList<ProductModel> items = <ProductModel>[].obs;
+  final RxBool isLoading = false.obs;
+  static final ApiService _api = ApiService();
+  @override
+  void onInit() {
+    super.onInit();
+    fetchWishlist(); // 👈 auto-load on app start
+  }
+
+  static Future<List<ProductModel>> fetchWishlist() async {
+    final data = await _api.getWishlist();
+    return data
+        .map((e) => ProductModel.fromJson(e['product'] as Map<String, dynamic>))
+        .toList();
+  }
 
   bool isWishlisted(int productId) {
     return items.any((p) => p.id == productId);
   }
 
-  void toggle(ProductModel product) {
+  Future<void> toggle(ProductModel product) async {
     if (isWishlisted(product.id)) {
+      // Optimistic update — remove immediately, revert on failure
       items.removeWhere((p) => p.id == product.id);
-      Get.snackbar(
-        'Removed',
-        '${product.name} removed from wishlist',
-        snackPosition: SnackPosition.BOTTOM,
-      );
+      final success = await _api.removeFromWishlist(product.id);
+      if (!success) {
+        items.add(product); // revert
+        Get.snackbar('Error', 'Could not remove from wishlist');
+      } else {
+        Get.snackbar(
+          'Removed',
+          '${product.name} removed from wishlist',
+          snackPosition: SnackPosition.BOTTOM,
+        );
+      }
     } else {
+      // Optimistic update — add immediately, revert on failure
       items.add(product);
-      Get.snackbar(
-        'Saved',
-        '${product.name} added to wishlist',
-        snackPosition: SnackPosition.BOTTOM,
-      );
+      final success = await _api.addToWishlist(product.id);
+      if (!success) {
+        items.removeWhere((p) => p.id == product.id); // revert
+        Get.snackbar('Error', 'Could not add to wishlist');
+      } else {
+        Get.snackbar(
+          'Saved',
+          '${product.name} added to wishlist',
+          snackPosition: SnackPosition.BOTTOM,
+        );
+      }
     }
   }
 }
