@@ -85,7 +85,7 @@ class _FlashSaleStripState extends State<FlashSaleStrip> {
         children: [
           // Header row
           Padding(
-            padding: EdgeInsets.symmetric(horizontal: width * 0.04),
+            padding: EdgeInsets.symmetric(horizontal: width * 0.05),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -143,11 +143,11 @@ class _FlashSaleStripState extends State<FlashSaleStrip> {
             ),
           ),
 
-          SizedBox(height: height * 0.008),
+          SizedBox(height: height * 0.01),
 
           // Horizontal product cards
           SizedBox(
-            height: height * 0.24,
+            height: height * 0.20,
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
               itemCount: widget.controller.flashSaleProducts.length,
@@ -159,7 +159,7 @@ class _FlashSaleStripState extends State<FlashSaleStrip> {
                   onTap: () =>
                       Get.to(() => ProductDetailsPage(product: product)),
                   child: Container(
-                    width: width * 0.38,
+                    width: width * 0.28,
                     margin: EdgeInsets.only(
                       left: width * 0.04,
                       right:
@@ -171,146 +171,181 @@ class _FlashSaleStripState extends State<FlashSaleStrip> {
                     ),
                     decoration: BoxDecoration(
                       color: Colors.white,
-                      borderRadius: BorderRadius.circular(width * 0.04),
-                      boxShadow: const [
-                        BoxShadow(color: Colors.black12, blurRadius: 5),
-                      ],
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: Colors.grey.shade200),
                     ),
-                    child: Stack(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // Discount badge
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 6,
-                                vertical: 2,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Colors.red,
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: Text(
-                                '-$discountInt%',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w600,
+                        // ── Image block ────────────────────────
+                        AspectRatio(
+                          aspectRatio: 1,
+                          child: Stack(
+                            children: [
+                              Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.all(10),
+                                decoration: const BoxDecoration(
+                                  color: Color(0xFFF6F8F5),
+                                  borderRadius: BorderRadius.vertical(
+                                    top: Radius.circular(14),
+                                  ),
                                 ),
-                              ),
-                            ),
-
-                            // Product image
-                            Expanded(
-                              child: Center(
                                 child: Image.network(
                                   product.image,
                                   fit: BoxFit.contain,
-                                  errorBuilder: (_, __, ___) => const Icon(
+                                  errorBuilder: (_, _, _) => Icon(
                                     Icons.image_not_supported,
-                                    color: Colors.grey,
+                                    color: Colors.grey[300],
                                   ),
                                 ),
                               ),
-                            ),
 
-                            // Name
-                            Text(
-                              product.name,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                fontSize: width * 0.032,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-
-                            SizedBox(height: height * 0.003),
-
-                            // Prices row
-                            Row(
-                              children: [
-                                Text(
-                                  '₹${product.discounted_price.toStringAsFixed(0)}',
-                                  style: TextStyle(
-                                    color: Colors.green,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: width * 0.035,
-                                  ),
-                                ),
-                                SizedBox(width: width * 0.02),
-                                Text(
-                                  '₹${product.price.toStringAsFixed(0)}',
-                                  style: TextStyle(
-                                    color: Colors.grey,
-                                    fontSize: width * 0.028,
-                                    decoration: TextDecoration.lineThrough,
-                                  ),
-                                ),
-                              ],
-                            ),
-
-                            SizedBox(height: height * 0.006),
-
-                            // Add button
-                            Container(
-                              width: double.infinity,
-                              padding: EdgeInsets.symmetric(
-                                vertical: height * 0.007,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Colors.green,
-                                borderRadius: BorderRadius.circular(
-                                  width * 0.02,
-                                ),
-                              ),
-                              child: Center(
-                                child: Text(
-                                  'View',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: width * 0.032,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        Positioned(
-                          top: 4,
-                          right: 4,
-                          child: Obx(
-                            () => GestureDetector(
-                              onTap: () => wishlistController.toggle(product),
-                              child: Container(
-                                width: 28,
-                                height: 28,
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  shape: BoxShape.circle,
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black12,
-                                      blurRadius: 4,
+                              // Discount badge (top-left)
+                              if (discountInt > 0)
+                                Positioned(
+                                  top: 6,
+                                  left: 6,
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 5,
+                                      vertical: 2,
                                     ),
-                                  ],
+                                    decoration: BoxDecoration(
+                                      color: Colors.red.shade500,
+                                      borderRadius: BorderRadius.circular(5),
+                                    ),
+                                    child: Text(
+                                      '-$discountInt%',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 9,
+                                        fontWeight: FontWeight.w800,
+                                      ),
+                                    ),
+                                  ),
                                 ),
-                                child: Icon(
-                                  wishlistController.isWishlisted(product.id)
-                                      ? Icons.favorite
-                                      : Icons.favorite_border,
-                                  size: 16,
-                                  color:
-                                      wishlistController.isWishlisted(
-                                        product.id,
-                                      )
-                                      ? Color(0xFFE0386A)
-                                      : Colors.grey,
+
+                              // Wishlist heart (top-right)
+                              Positioned(
+                                top: 6,
+                                right: 6,
+                                child: Obx(
+                                  () => GestureDetector(
+                                    onTap: () =>
+                                        wishlistController.toggle(product),
+                                    child: Container(
+                                      padding: const EdgeInsets.all(4),
+                                      decoration: const BoxDecoration(
+                                        color: Colors.white,
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: Icon(
+                                        wishlistController.isWishlisted(
+                                              product.id,
+                                            )
+                                            ? Icons.favorite
+                                            : Icons.favorite_border,
+                                        size: 12,
+                                        color:
+                                            wishlistController.isWishlisted(
+                                              product.id,
+                                            )
+                                            ? const Color(0xFFE0386A)
+                                            : Colors.grey,
+                                      ),
+                                    ),
+                                  ),
                                 ),
                               ),
-                            ),
+
+                              // VIEW button (bottom-right, overlapping image)
+                              Positioned(
+                                bottom: 4,
+                                right: 4,
+                                child: GestureDetector(
+                                  onTap: () {
+                                    Get.to(
+                                      () =>
+                                          ProductDetailsPage(product: product),
+                                    );
+                                  },
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 10,
+                                      vertical: 4,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(6),
+                                      border: Border.all(
+                                        color: Colors.green.shade600,
+                                        width: 1.2,
+                                      ),
+                                    ),
+                                    child: Text(
+                                      "VIEW",
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w800,
+                                        color: Colors.green.shade700,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        // ── Info block ──────────────────────────
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(8, 6, 8, 8),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Price row
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  Text(
+                                    '₹${product.discounted_price.toStringAsFixed(0)}',
+                                    style: const TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w800,
+                                      color: Colors.black87,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Padding(
+                                    padding: const EdgeInsets.only(bottom: 1.5),
+                                    child: Text(
+                                      '₹${product.price.toStringAsFixed(0)}',
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        color: Colors.grey.shade400,
+                                        decoration: TextDecoration.lineThrough,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+
+                              const SizedBox(height: 3),
+
+                              // Name
+                              Text(
+                                product.name,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.w600,
+                                  height: 1.2,
+                                  color: Colors.black87,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ],

@@ -1,8 +1,5 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:http/http.dart' as http;
 import 'package:instant_delivery/controllers/address_controller.dart';
 import 'package:instant_delivery/controllers/coupon_controller.dart';
 import 'package:instant_delivery/controllers/pass_controller.dart';
@@ -46,8 +43,13 @@ class _CheckoutPageState extends State<CheckoutPage> {
 
   bool showAllItems = false;
 
+  // Tracks whether the Confirm Order flow (fetching location + preparing
+  // navigation to PaymentPage) is currently in progress, so we can show a
+  // spinner and block duplicate taps.
+  final RxBool isConfirmingOrder = false.obs;
+
   final TextEditingController _couponCtrl = TextEditingController();
-  bool _isApplyingCoupon = false;
+  final bool _isApplyingCoupon = false;
   String _couponError = '';
   String _localCouponCode = '';
   double _localDiscount = 0.0;
@@ -536,48 +538,69 @@ class _CheckoutPageState extends State<CheckoutPage> {
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.green,
+                      disabledBackgroundColor: Colors.green.shade300,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    onPressed: () async {
-                      if (addressController.selectedAddress.value == null) {
-                        Get.snackbar("Error", "Please select an address");
-                        return;
-                      }
-                      try {
-                        final locationData =
-                            await LocationService.getCurrentAddress();
-                        final String? lat = locationData["lat"];
-                        final String? lng = locationData["lng"];
-                        Get.to(
-                          () => PaymentPage(
-                            totalAmount: finalAmount,
-                            items: widget.items,
-                            address: addressController.selectedAddress.value,
-                            couponCode: _activeCouponCode.isNotEmpty
-                                ? _activeCouponCode
-                                : null,
-                            currentLat: lat,
-                            currentLng: lng,
-                            // ✅ add these
-                            deliveryType: widget.deliveryType,
-                            scheduledDate: widget.scheduledDate,
-                            scheduledSlotStart: widget.scheduledSlotStart,
-                            scheduledSlotEnd: widget.scheduledSlotEnd,
+                    onPressed: isConfirmingOrder.value
+                        ? null
+                        : () async {
+                            if (addressController.selectedAddress.value ==
+                                null) {
+                              Get.snackbar("Error", "Please select an address");
+                              return;
+                            }
+
+                            isConfirmingOrder.value = true;
+                            try {
+                              final locationData =
+                                  await LocationService.getCurrentAddress();
+                              final String? lat = locationData["lat"];
+                              final String? lng = locationData["lng"];
+                              Get.to(
+                                () => PaymentPage(
+                                  totalAmount: finalAmount,
+                                  items: widget.items,
+                                  address:
+                                      addressController.selectedAddress.value,
+                                  couponCode: _activeCouponCode.isNotEmpty
+                                      ? _activeCouponCode
+                                      : null,
+                                  currentLat: lat,
+                                  currentLng: lng,
+                                  // ✅ add these
+                                  deliveryType: widget.deliveryType,
+                                  scheduledDate: widget.scheduledDate,
+                                  scheduledSlotStart: widget.scheduledSlotStart,
+                                  scheduledSlotEnd: widget.scheduledSlotEnd,
+                                ),
+                              );
+                            } catch (e) {
+                              Get.snackbar(
+                                "Location Error",
+                                "Could not get your location. Please enable GPS.",
+                              );
+                            } finally {
+                              // Always clear the loading state, whether we
+                              // navigated away, hit an error, or the
+                              // location call threw.
+                              isConfirmingOrder.value = false;
+                            }
+                          },
+                    child: isConfirmingOrder.value
+                        ? const SizedBox(
+                            width: 22,
+                            height: 22,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2.4,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Text(
+                            "Confirm Order",
+                            style: TextStyle(color: Colors.white),
                           ),
-                        );
-                      } catch (e) {
-                        Get.snackbar(
-                          "Location Error",
-                          "Could not get your location. Please enable GPS.",
-                        );
-                      }
-                    },
-                    child: const Text(
-                      "Confirm Order",
-                      style: TextStyle(color: Colors.white),
-                    ),
                   ),
                 ),
               ),

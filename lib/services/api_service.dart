@@ -52,7 +52,7 @@ class ApiService {
       } else {
         return {'data': response.data};
       }
-    } on DioError catch (e) {
+    } on DioException catch (e) {
       if (e.response != null) {
         // Safely get error message
         if (e.response!.data is Map<String, dynamic>) {
@@ -373,11 +373,9 @@ class ApiService {
           "coupon_code": couponCode,
         if (currentLat != null) "current_lat": double.tryParse(currentLat),
         if (currentLng != null) "current_lng": double.tryParse(currentLng),
-        if (scheduledDate != null) "scheduled_date": scheduledDate, // 👈 add
-        if (scheduledSlotStart != null)
-          "scheduled_slot_start": scheduledSlotStart, // 👈 add
-        if (scheduledSlotEnd != null)
-          "scheduled_slot_end": scheduledSlotEnd, // 👈 add
+        "scheduled_date": ?scheduledDate, // 👈 add
+        "scheduled_slot_start": ?scheduledSlotStart, // 👈 add
+        "scheduled_slot_end": ?scheduledSlotEnd, // 👈 add
       },
     );
     return {"data": response.data, "statusCode": response.statusCode};

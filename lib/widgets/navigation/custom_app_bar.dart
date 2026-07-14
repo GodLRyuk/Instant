@@ -32,58 +32,58 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
       title: Image.asset(
         'assets/images/logo_transperent.png',
         fit: BoxFit.cover,
-        width: width * 0.25,
+        width: width * 0.26,
         height: 35,
       ),
 
       // ✅ CONDITIONAL LEADING
       leading: showBackButton
-    ? IconButton(
-        icon: const Icon(Icons.arrow_back, color: Colors.white),
-        onPressed: () {
-          Get.back();
-        },
-      )
-    : FutureBuilder<String?>(
-        future: _getProfileImage(),
-        builder: (context, snapshot) {
-          final imageUrl = snapshot.data;
-
-          return Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: GestureDetector(
-              onTap: () {
-                Get.to(() => const ProfilePage());
+          ? IconButton(
+              icon: const Icon(Icons.arrow_back, color: Colors.white),
+              onPressed: () {
+                Get.back();
               },
-              child: Container(
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white, width: 2),
-                ),
-                child: ClipOval(
-                  child: imageUrl != null && imageUrl.isNotEmpty
-                      ? Image.network(
-                          imageUrl,
-                          fit: BoxFit.cover,
-                          width: 40,
-                          height: 40,
-                          errorBuilder: (context, error, stackTrace) {
-                            return Image.asset(
-                              'assets/images/profileImg.jpg',
-                              fit: BoxFit.cover,
-                            );
-                          },
-                        )
-                      : Image.asset(
-                          'assets/images/profileImg.jpg',
-                          fit: BoxFit.cover,
-                        ),
-                ),
-              ),
+            )
+          : FutureBuilder<String?>(
+              future: _getProfileImage(),
+              builder: (context, snapshot) {
+                final imageUrl = snapshot.data;
+
+                return Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: GestureDetector(
+                    onTap: () {
+                      Get.to(() => const ProfilePage());
+                    },
+                    child: Container(
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 2),
+                      ),
+                      child: ClipOval(
+                        child: imageUrl != null && imageUrl.isNotEmpty
+                            ? Image.network(
+                                imageUrl,
+                                fit: BoxFit.cover,
+                                width: 40,
+                                height: 40,
+                                errorBuilder: (context, error, stackTrace) {
+                                  return Image.asset(
+                                    'assets/images/profileImg.jpg',
+                                    fit: BoxFit.cover,
+                                  );
+                                },
+                              )
+                            : Image.asset(
+                                'assets/images/profileImg.jpg',
+                                fit: BoxFit.cover,
+                              ),
+                      ),
+                    ),
+                  ),
+                );
+              },
             ),
-          );
-        },
-      ),
 
       // ✅ GRADIENT
       flexibleSpace: Container(
@@ -118,7 +118,7 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   Size get preferredSize => const Size.fromHeight(kToolbarHeight);
 
   Future<String?> _getProfileImage() async {
-  final prefs = await SharedPreferences.getInstance();
-  return prefs.getString('profile_image');
-}
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('profile_image');
+  }
 }

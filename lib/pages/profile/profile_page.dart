@@ -8,6 +8,7 @@ import 'package:instant_delivery/pages/membership/pass_purchase_screen.dart';
 import 'package:instant_delivery/pages/orders/order_detail_page.dart';
 import 'package:instant_delivery/pages/orders/order_list_page.dart';
 import 'package:instant_delivery/pages/profile/edit_profile_page.dart';
+import 'package:instant_delivery/route/app_routes.dart';
 import 'package:instant_delivery/widgets/navigation/custom_app_bar.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -350,7 +351,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: () {
-                    Get.snackbar("Logout", "Successfully logged out");
+                    Get.toNamed(AppRoutes.loginPage);
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Color(0xFF53D288),

@@ -653,6 +653,7 @@ class _CartPageState extends State<CartPage> {
 
           final items = cartController.cartItems.map((item) {
             return {
+              "product": item.product_id,
               "name": item.product,
               "price": item.price,
               "quantity": item.quantity,

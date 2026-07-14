@@ -33,6 +33,14 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
   RxInt reviewCount = 0.obs;
   final WishlistController wishlistController = Get.put(WishlistController());
 
+  // Tracks whether the "Add to Cart" API call is currently in flight,
+  // so we can show a loading spinner and prevent duplicate taps.
+  final RxBool isAddingToCart = false.obs;
+
+  // Tracks whether the "Buy Now" flow is currently preparing (waiting on
+  // delivery slots to be ready) before opening the schedule sheet.
+  final RxBool isBuyNowLoading = false.obs;
+
   // ── Scheduling state (for Buy Now bottom sheet) ───────────────
   String _deliveryType = 'ASAP';
   List<dynamic> _slotDays = [];
@@ -41,13 +49,19 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
   String? _selectedSlotStart;
   String? _selectedSlotEnd;
 
+  // Future for the initial slots fetch, so "Buy Now" can await it if the
+  // user taps before slots have finished loading. Initialized eagerly
+  // (not `late`) so it's always safe to await even if initState hasn't
+  // run yet on this instance (e.g. right after a hot reload).
+  Future<void> _slotsFuture = Future.value();
+
   @override
   void initState() {
     super.initState();
 
     currentProduct.value = widget.product;
     controller.loadProductReviews(widget.product.id);
-    _fetchSlots();
+    _slotsFuture = _fetchSlots();
 
     if (Get.isRegistered<ProductController>(tag: "rec")) {
       recommendedController = Get.find(tag: "rec");
@@ -434,8 +448,9 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                                 Text(quantity.value.toString()),
                                 IconButton(
                                   onPressed: () {
-                                    if (quantity.value < stock)
+                                    if (quantity.value < stock) {
                                       quantity.value++;
+                                    }
                                   },
                                   icon: const Icon(Icons.add),
                                 ),
@@ -458,27 +473,37 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                       child: Obx(() {
                         final added = isInCart(product.id);
                         final outOfStock = (product.stock ?? 0) == 0;
+                        final isLoading = isAddingToCart.value;
 
                         return GestureDetector(
                           onTap: () async {
-                            if (outOfStock) {
-                              return; // do nothing if out of stock
+                            if (outOfStock || isLoading) {
+                              // do nothing if out of stock or a request
+                              // is already in flight
+                              return;
                             }
 
                             if (added) {
                               Get.to(() => CartPage());
                             } else {
-                              // ✅ Only update button state and cart if API returns 200
-                              final success = await cartController.addToCart(
-                                product.id,
-                                quantity.value,
-                              );
-                              if (success) {
-                                await cartController
-                                    .fetchCart(); // refresh cart list so isInCart() becomes true
+                              isAddingToCart.value = true;
+                              try {
+                                // ✅ Only update button state and cart if API returns 200
+                                final success = await cartController.addToCart(
+                                  product.id,
+                                  quantity.value,
+                                );
+                                if (success) {
+                                  await cartController
+                                      .fetchCart(); // refresh cart list so isInCart() becomes true
+                                }
+                                // If success == false: snackbar already shown by controller,
+                                // button stays green "Add to Cart", no state change.
+                              } finally {
+                                // Always clear the loading state, whether
+                                // the call succeeded, failed, or threw.
+                                isAddingToCart.value = false;
                               }
-                              // If success == false: snackbar already shown by controller,
-                              // button stays green "Add to Cart", no state change.
                             }
                           },
                           child: Container(
@@ -491,21 +516,30 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Center(
-                              child: Text(
-                                outOfStock
-                                    ? "Out of Stock"
-                                    : added
-                                    ? "Go to Cart"
-                                    : "Add to Cart",
-                                style: TextStyle(
-                                  color: outOfStock
-                                      ? Colors.grey
-                                      : added
-                                      ? Colors.white
-                                      : Colors.green,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
+                              child: isLoading
+                                  ? const SizedBox(
+                                      width: 20,
+                                      height: 20,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2.2,
+                                        color: Colors.green,
+                                      ),
+                                    )
+                                  : Text(
+                                      outOfStock
+                                          ? "Out of Stock"
+                                          : added
+                                          ? "Go to Cart"
+                                          : "Add to Cart",
+                                      style: TextStyle(
+                                        color: outOfStock
+                                            ? Colors.grey
+                                            : added
+                                            ? Colors.white
+                                            : Colors.green,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
                             ),
                           ),
                         );
@@ -514,42 +548,65 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                     const SizedBox(width: 10),
                     // Buy Now — opens scheduling bottom sheet
                     Expanded(
-                      child: Builder(
-                        builder: (_) {
-                          final outOfStock = (product.stock ?? 0) == 0;
-                          return GestureDetector(
-                            onTap: outOfStock
-                                ? null
-                                : () => _showBuyNowSheet(product),
-                            child: Container(
-                              height: 50,
-                              decoration: BoxDecoration(
-                                gradient: outOfStock
-                                    ? null
-                                    : LinearGradient(
-                                        colors: [
-                                          Colors.green,
-                                          Colors.green.shade700,
-                                        ],
-                                      ),
-                                color: outOfStock ? Colors.grey.shade300 : null,
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Center(
-                                child: Text(
-                                  outOfStock ? "Buy Now" : "Buy Now",
-                                  style: TextStyle(
-                                    color: outOfStock
-                                        ? Colors.grey.shade500
-                                        : Colors.white,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
+                      child: Obx(() {
+                        final outOfStock = (product.stock ?? 0) == 0;
+                        final isLoading = isBuyNowLoading.value;
+
+                        return GestureDetector(
+                          onTap: outOfStock
+                              ? null
+                              : () async {
+                                  if (isLoading) {
+                                    // already preparing — ignore extra taps
+                                    return;
+                                  }
+                                  isBuyNowLoading.value = true;
+                                  try {
+                                    // Make sure delivery slots have finished
+                                    // loading before showing the sheet.
+                                    await _slotsFuture;
+                                  } finally {
+                                    isBuyNowLoading.value = false;
+                                  }
+                                  _showBuyNowSheet(product);
+                                },
+                          child: Container(
+                            height: 50,
+                            decoration: BoxDecoration(
+                              gradient: outOfStock
+                                  ? null
+                                  : LinearGradient(
+                                      colors: [
+                                        Colors.green,
+                                        Colors.green.shade700,
+                                      ],
+                                    ),
+                              color: outOfStock ? Colors.grey.shade300 : null,
+                              borderRadius: BorderRadius.circular(12),
                             ),
-                          );
-                        },
-                      ),
+                            child: Center(
+                              child: isLoading
+                                  ? const SizedBox(
+                                      width: 20,
+                                      height: 20,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2.2,
+                                        color: Colors.white,
+                                      ),
+                                    )
+                                  : Text(
+                                      "Buy Now",
+                                      style: TextStyle(
+                                        color: outOfStock
+                                            ? Colors.grey.shade500
+                                            : Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                            ),
+                          ),
+                        );
+                      }),
                     ),
                   ],
                 ),
@@ -852,7 +909,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
                     itemCount: reviews.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 10),
+                    separatorBuilder: (_, _) => const SizedBox(height: 10),
                     itemBuilder: (context, index) {
                       final r = reviews[index];
                       return Container(

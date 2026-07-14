@@ -21,11 +21,11 @@ class PassController extends GetxController {
   final isLoading = false.obs;
   final isPurchasing = false.obs;
 
-  @override
-  void onInit() {
-    super.onInit();
-    fetchPassStatus();
-  }
+@override
+void onInit() {
+  super.onInit();
+  Future.microtask(() => fetchPassStatus());
+}
 
   Future<void> fetchPassStatus() async {
     try {

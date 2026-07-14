@@ -37,6 +37,11 @@ class PaymentPage extends StatefulWidget {
 class _PaymentPageState extends State<PaymentPage> {
   String selectedPayment = "GPay";
   final PaymentController paymentController = Get.put(PaymentController());
+
+  // Tracks whether processPayment() is currently in flight, so we can
+  // show a spinner and block duplicate taps on "Proceed to Pay".
+  final RxBool isProcessingPayment = false.obs;
+
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
@@ -111,27 +116,54 @@ class _PaymentPageState extends State<PaymentPage> {
             child: SizedBox(
               width: double.infinity,
               height: 50,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
-                onPressed: () {
-                  paymentController.processPayment(
-                    items: widget.items,
-                    address: widget.address,
-                    totalAmount: widget.totalAmount,
-                    paymentMethod: selectedPayment,
-                    couponCode: widget.couponCode,
-                    currentLat: widget.currentLat,
-                    currentLng: widget.currentLng,
-                    // ✅ add these
-                    deliveryType: widget.deliveryType,
-                    scheduledDate: widget.scheduledDate,
-                    scheduledSlotStart: widget.scheduledSlotStart,
-                    scheduledSlotEnd: widget.scheduledSlotEnd,
-                  );
-                },
-                child: Text(
-                  "Proceed to Pay",
-                  style: TextStyle(color: Colors.white),
+              child: Obx(
+                () => ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green,
+                    disabledBackgroundColor: Colors.green.shade300,
+                  ),
+                  onPressed: isProcessingPayment.value
+                      ? null
+                      : () async {
+                          isProcessingPayment.value = true;
+                          try {
+                            await paymentController.processPayment(
+                              items: widget.items,
+                              address: widget.address,
+                              totalAmount: widget.totalAmount,
+                              paymentMethod: selectedPayment,
+                              couponCode: widget.couponCode,
+                              currentLat: widget.currentLat,
+                              currentLng: widget.currentLng,
+                              // ✅ add these
+                              deliveryType: widget.deliveryType,
+                              scheduledDate: widget.scheduledDate,
+                              scheduledSlotStart: widget.scheduledSlotStart,
+                              scheduledSlotEnd: widget.scheduledSlotEnd,
+                            );
+                          } finally {
+                            // Always clear the loading state, whether the
+                            // payment succeeded, failed, or threw — and
+                            // whether or not this page is still mounted
+                            // (e.g. if processPayment navigated away).
+                            if (mounted) {
+                              isProcessingPayment.value = false;
+                            }
+                          }
+                        },
+                  child: isProcessingPayment.value
+                      ? const SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.4,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Text(
+                          "Proceed to Pay",
+                          style: TextStyle(color: Colors.white),
+                        ),
                 ),
               ),
             ),

@@ -1,7 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:instant_delivery/config/app_config.dart';
 import 'package:instant_delivery/pages/cart/cart_page.dart';
 import '../controllers/bundle_controller.dart';
+import '../models/bundle_model.dart';
+
+const String _kApiBaseUrl = AppConfig.baseUrl;
+
+String _resolveImageUrl(String rawUrl) {
+  if (rawUrl.isEmpty) return rawUrl;
+  if (rawUrl.startsWith('http://') || rawUrl.startsWith('https://')) {
+    return rawUrl;
+  }
+  // Relative path — prepend the base URL.
+  final path = rawUrl.startsWith('/') ? rawUrl : '/$rawUrl';
+  return '$_kApiBaseUrl$path';
+}
 
 class BundleStrip extends StatelessWidget {
   const BundleStrip({super.key});
@@ -59,178 +73,11 @@ class BundleStrip extends StatelessWidget {
             height: height * 0.28,
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
+              padding: EdgeInsets.symmetric(horizontal: width * 0.04),
               itemCount: controller.bundleList.length,
               itemBuilder: (context, index) {
-                final bundle = controller.bundleList[index];
-
-                return Container(
-                  width: width * 0.72,
-                  margin: EdgeInsets.only(
-                    left: width * 0.04,
-                    right: index == controller.bundleList.length - 1
-                        ? width * 0.04
-                        : 0,
-                    bottom: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(width * 0.04),
-                    boxShadow: const [
-                      BoxShadow(color: Colors.black12, blurRadius: 5),
-                    ],
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(12),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Bundle name + discount badge
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Expanded(
-                              child: Text(
-                                bundle.name,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  fontSize: width * 0.04,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 3,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Colors.green,
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: Text(
-                                '-${bundle.discountPercent.toInt()}%',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-
-                        SizedBox(height: height * 0.005),
-
-                        // Description
-                        Text(
-                          bundle.description,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: width * 0.03,
-                            color: Colors.grey[600],
-                          ),
-                        ),
-
-                        SizedBox(height: height * 0.01),
-
-                        // Product images row
-                        SizedBox(
-                          height: height * 0.09,
-                          child: ListView.builder(
-                            scrollDirection: Axis.horizontal,
-                            itemCount: bundle.products.length,
-                            itemBuilder: (context, i) {
-                              final product = bundle.products[i];
-                              return Container(
-                                width: height * 0.09,
-                                margin: const EdgeInsets.only(right: 8),
-                                decoration: BoxDecoration(
-                                  color: Colors.grey[100],
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(8),
-                                  child: product.image.isNotEmpty
-                                      ? Image.network(
-                                          product.image,
-                                          fit: BoxFit.contain,
-                                          errorBuilder: (_, __, ___) =>
-                                              const Icon(
-                                                Icons.image_not_supported,
-                                                color: Colors.grey,
-                                              ),
-                                        )
-                                      : const Icon(
-                                          Icons.image_not_supported,
-                                          color: Colors.grey,
-                                        ),
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-
-                        SizedBox(height: height * 0.01),
-
-                        // Price row + Add button
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  '₹${bundle.bundlePrice.toStringAsFixed(0)}',
-                                  style: TextStyle(
-                                    color: Colors.green,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: width * 0.045,
-                                  ),
-                                ),
-                                Text(
-                                  '₹${(bundle.originalPrice).toStringAsFixed(0)}',
-                                  style: TextStyle(
-                                    color: Colors.grey,
-                                    fontSize: width * 0.03,
-                                    decoration: TextDecoration.lineThrough,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            GestureDetector(
-                              onTap: () async {
-                                await controller.addBundleToCart(bundle);
-                                Get.to(() => const CartPage());
-                              },
-                              child: Container(
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: width * 0.06,
-                                  vertical: height * 0.008,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.green,
-                                  borderRadius: BorderRadius.circular(
-                                    width * 0.02,
-                                  ),
-                                ),
-                                child: Text(
-                                  'Add To Cart',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: width * 0.033,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                );
+                final BundleModel bundle = controller.bundleList[index];
+                return _BundleCard(bundle: bundle, width: width);
               },
             ),
           ),
@@ -239,5 +86,218 @@ class BundleStrip extends StatelessWidget {
         ],
       );
     });
+  }
+}
+
+// ── Bundle card ────────────────────────────────────────────────────
+class _BundleCard extends StatelessWidget {
+  final BundleModel bundle;
+  final double width;
+
+  const _BundleCard({required this.bundle, required this.width});
+
+  @override
+  Widget build(BuildContext context) {
+    final bool hasDiscount =
+        bundle.discountPercent > 0 && bundle.originalPrice > bundle.bundlePrice;
+    final int discountPct = bundle.discountPercent.round();
+    final int itemCount = bundle.products.length;
+    final String resolvedImageUrl = _resolveImageUrl(bundle.image);
+
+    return Container(
+      width: width * 0.42,
+      margin: const EdgeInsets.only(right: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.grey.shade200),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // ── Image block ────────────────────────────────
+          Expanded(
+            child: Stack(
+              children: [
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(10),
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFF6F8F5),
+                    borderRadius: BorderRadius.vertical(
+                      top: Radius.circular(14),
+                    ),
+                  ),
+                  child: resolvedImageUrl.isNotEmpty
+                      ? Image.network(
+                          resolvedImageUrl,
+                          fit: BoxFit.contain,
+                          errorBuilder: (_, error, _) {
+                            // Surfaces the real cause in debug console
+                            // instead of silently showing a placeholder.
+                            debugPrint(
+                              'Bundle image failed to load: '
+                              '$resolvedImageUrl ($error)',
+                            );
+                            return Icon(
+                              Icons.card_giftcard,
+                              color: Colors.grey[300],
+                              size: 36,
+                            );
+                          },
+                        )
+                      : Icon(
+                          Icons.card_giftcard,
+                          color: Colors.grey[300],
+                          size: 36,
+                        ),
+                ),
+
+                // Discount badge (top-left)
+                if (hasDiscount)
+                  Positioned(
+                    top: 6,
+                    left: 6,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 5,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.red.shade500,
+                        borderRadius: BorderRadius.circular(5),
+                      ),
+                      child: Text(
+                        "-$discountPct%",
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 9,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                // Item count badge (top-right)
+                if (itemCount > 0)
+                  Positioned(
+                    top: 6,
+                    right: 6,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.green.shade700,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        "$itemCount items",
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 9,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                // ADD button (bottom-right, overlapping image)
+                Positioned(
+                  bottom: 4,
+                  right: 4,
+                  child: GestureDetector(
+                    onTap: () {
+                      // TODO: hook up "add bundle to cart" logic here,
+                      // then navigate to the cart once items are added.
+                      Get.to(() => const CartPage());
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(
+                          color: Colors.green.shade600,
+                          width: 1.2,
+                        ),
+                      ),
+                      child: Text(
+                        "ADD",
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w800,
+                          color: Colors.green.shade700,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // ── Info block ──────────────────────────────────
+          Padding(
+            padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  bundle.name,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w700,
+                    height: 1.2,
+                    color: Colors.black87,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      '₹${bundle.bundlePrice.toStringAsFixed(0)}',
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    if (hasDiscount) ...[
+                      const SizedBox(width: 5),
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 1.5),
+                        child: Text(
+                          '₹${bundle.originalPrice.toStringAsFixed(0)}',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Colors.grey.shade400,
+                            decoration: TextDecoration.lineThrough,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

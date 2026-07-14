@@ -6,11 +6,11 @@ class OrderController extends GetxController {
   var isLoading = false.obs;
   var orderList = [].obs;
 
-  @override
-  void onInit() {
-    super.onInit();
-    fetchOrders();
-  }
+@override
+void onInit() {
+  super.onInit();
+  Future.microtask(() => fetchOrders());
+}
 
   Future<void> createOrder({
     required List items,

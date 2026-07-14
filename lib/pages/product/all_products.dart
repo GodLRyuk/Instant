@@ -9,12 +9,13 @@ import 'package:instant_delivery/widgets/navigation/custom_app_bar.dart';
 // ── Design tokens ─────────────────────────────────────────────────
 const _kPrimary = Color(0xFF1DB954); // vivid green
 const _kPrimaryDark = Color(0xFF0F8C3A); // deep green
-const _kSurface = Color(0xFFF6F8F5); // off-white with green tint
+const _kSurface = Color(0xFFFFFFFF);
 const _kCard = Colors.white;
 const _kTextPrimary = Color(0xFF111827);
 const _kTextMuted = Color(0xFF6B7280);
-const _kOutOfStock = Color(0xFFFF4D4D);
-const _kBadgeBg = Color(0xFFE8F5EC);
+const _kBorder = Color(0xFFE5E7EB);
+const _kDiscountBlue = Color(0xFF1D8FE1);
+const _kStar = Color(0xFFFFB800);
 
 class AllProductsPage extends StatefulWidget {
   const AllProductsPage({super.key});
@@ -23,17 +24,23 @@ class AllProductsPage extends StatefulWidget {
   State<AllProductsPage> createState() => _AllProductsPageState();
 }
 
-class _AllProductsPageState extends State<AllProductsPage>
-    with SingleTickerProviderStateMixin {
+class _AllProductsPageState extends State<AllProductsPage> {
   late ProductController productController;
   bool isSearch = false;
 
   final CategoryController categoryController = Get.put(CategoryController());
   final TextEditingController searchController = TextEditingController();
-  final FocusNode _searchFocus = FocusNode();
 
   var selectedCategoryId = "all".obs;
-  bool _searchFocused = false;
+
+  // Simple placeholder brand list for the "Shop by brands" strip.
+  // Replace with a real BrandController / API-backed list when available.
+  final List<Map<String, String>> _brands = const [
+    {"name": "Boldfit", "logo": ""},
+    {"name": "Cello", "logo": ""},
+    {"name": "Pexpo", "logo": ""},
+    {"name": "Milton", "logo": ""},
+  ];
 
   @override
   void initState() {
@@ -45,7 +52,9 @@ class _AllProductsPageState extends State<AllProductsPage>
       productController = Get.find<ProductController>(tag: "search");
     } else {
       productController = Get.find<ProductController>(tag: "all");
-      productController.fetchProducts();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        productController.fetchProducts();
+      });
     }
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -54,15 +63,10 @@ class _AllProductsPageState extends State<AllProductsPage>
         productController.productList.assignAll(all);
       }
     });
-
-    _searchFocus.addListener(() {
-      setState(() => _searchFocused = _searchFocus.hasFocus);
-    });
   }
 
   @override
   void dispose() {
-    _searchFocus.dispose();
     searchController.dispose();
     super.dispose();
   }
@@ -95,226 +99,81 @@ class _AllProductsPageState extends State<AllProductsPage>
         return CustomScrollView(
           physics: const BouncingScrollPhysics(),
           slivers: [
-            // ── Search bar ──────────────────────────────────────
-            SliverToBoxAdapter(child: _buildSearchBar()),
+            // ── Filter chip bar ──────────────────────────────────
+            SliverToBoxAdapter(child: _buildFilterBar()),
 
-            // ── Category chips ──────────────────────────────────
-            SliverToBoxAdapter(child: _buildCategoryChips()),
-
-            // ── Result count label ──────────────────────────────
-            SliverToBoxAdapter(
-              child: Obx(
-                () => Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
-                  child: Text(
-                    "${productController.productList.length} products",
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: _kTextMuted,
-                      fontWeight: FontWeight.w500,
-                      letterSpacing: 0.3,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-
-            // ── Product list ────────────────────────────────────
+            // ── Product grid ─────────────────────────────────────
             SliverPadding(
-              padding: const EdgeInsets.fromLTRB(16, 4, 16, 120),
+              padding: const EdgeInsets.fromLTRB(10, 8, 10, 24),
               sliver: Obx(
-                () => SliverList(
+                () => SliverGrid(
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 3,
+                    mainAxisSpacing: 14,
+                    crossAxisSpacing: 10,
+                    childAspectRatio: 0.58,
+                  ),
                   delegate: SliverChildBuilderDelegate((context, index) {
                     final product = productController.productList[index];
-                    return _ProductCard(product: product, index: index);
+                    return _ProductCard(product: product);
                   }, childCount: productController.productList.length),
                 ),
               ),
             ),
+
+            // ── Shop by brands ───────────────────────────────────
+            SliverToBoxAdapter(child: _buildBrandsSection()),
+
+            const SliverToBoxAdapter(child: SizedBox(height: 24)),
           ],
         );
       }),
     );
   }
 
-  // ── App bar ────────────────────────────────────────────────────
-  PreferredSizeWidget _buildAppBar() {
-    return AppBar(
-      backgroundColor: _kPrimary,
-      elevation: 0,
-      leading: GestureDetector(
-        onTap: () => Get.back(),
-        child: Container(
-          margin: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.2),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: const Icon(
-            Icons.arrow_back_ios_new_rounded,
-            color: Colors.white,
-            size: 16,
-          ),
-        ),
+  // ── Filter / sort / category chip bar ──────────────────────────
+  Widget _buildFilterBar() {
+    return Container(
+      height: 48,
+      decoration: const BoxDecoration(
+        border: Border(bottom: BorderSide(color: _kBorder, width: 1)),
       ),
-      title: const Text(
-        "All Products",
-        style: TextStyle(
-          color: Colors.white,
-          fontWeight: FontWeight.w700,
-          fontSize: 18,
-          letterSpacing: -0.3,
-        ),
-      ),
-      centerTitle: true,
-      actions: [
-        Container(
-          margin: const EdgeInsets.only(right: 14, top: 10, bottom: 10),
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.2),
-            borderRadius: BorderRadius.circular(10),
+      child: Obx(() {
+        final categories = [
+          {"id": "all", "name": "All"},
+          ...categoryController.categoryList.map(
+            (c) => {"id": c.id.toString(), "name": c.name},
           ),
-          child: Row(
-            children: [
-              const Icon(
-                Icons.shopping_cart_outlined,
-                color: Colors.white,
-                size: 18,
-              ),
-              const SizedBox(width: 4),
-              Obx(() {
-                // If cart controller is registered, show count
-                try {
-                  // fallback safe
-                  return const SizedBox.shrink();
-                } catch (_) {
-                  return const SizedBox.shrink();
-                }
-              }),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
+        ];
 
-  // ── Search bar ─────────────────────────────────────────────────
-  Widget _buildSearchBar() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        height: 52,
-        decoration: BoxDecoration(
-          color: _kCard,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: _searchFocused
-                  ? _kPrimary.withOpacity(0.15)
-                  : Colors.black.withOpacity(0.06),
-              blurRadius: _searchFocused ? 16 : 8,
-              offset: const Offset(0, 3),
-            ),
-          ],
-          border: Border.all(
-            color: _searchFocused
-                ? _kPrimary.withOpacity(0.4)
-                : Colors.transparent,
-            width: 1.5,
-          ),
-        ),
-        child: Row(
-          children: [
-            const SizedBox(width: 16),
-            Icon(
-              Icons.search_rounded,
-              color: _searchFocused ? _kPrimary : _kTextMuted,
-              size: 20,
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: TextField(
-                controller: searchController,
-                focusNode: _searchFocus,
-                textInputAction: TextInputAction.search,
-                onSubmitted: _doSearch,
-                style: const TextStyle(
-                  fontSize: 15,
-                  color: _kTextPrimary,
-                  fontWeight: FontWeight.w500,
-                ),
-                decoration: const InputDecoration(
-                  hintText: "Search products...",
-                  hintStyle: TextStyle(
-                    color: _kTextMuted,
-                    fontWeight: FontWeight.w400,
-                    fontSize: 15,
-                  ),
-                  border: InputBorder.none,
-                  isDense: true,
-                ),
-              ),
-            ),
-            GestureDetector(
-              onTap: () => _doSearch(searchController.text),
-              child: Container(
-                margin: const EdgeInsets.all(8),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 8,
-                ),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [_kPrimary, _kPrimaryDark],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Text(
-                  "Search",
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // ── Category chips ─────────────────────────────────────────────
-  Widget _buildCategoryChips() {
-    return Obx(() {
-      final categories = [
-        {"id": "all", "name": "All"},
-        ...categoryController.categoryList.map(
-          (c) => {"id": c.id.toString(), "name": c.name},
-        ),
-      ];
-
-      return SizedBox(
-        height: 44,
-        child: ListView.builder(
+        return ListView(
           scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-          itemCount: categories.length,
-          itemBuilder: (context, index) {
-            final cat = categories[index];
-            final isSelected = selectedCategoryId.value == cat['id'];
-            return _CategoryChip(
-              label: cat['name']!,
-              isSelected: isSelected,
-              onTap: () async {
-                selectedCategoryId.value = cat['id']!;
-                if (isSearch) {
-                  WidgetsBinding.instance.addPostFrameCallback((_) {
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          children: [
+            // Static utility chips
+            _filterChip(
+              label: "Filters",
+              icon: Icons.tune_rounded,
+              onTap: () {
+                // TODO: open a filter bottom sheet (material, capacity, brand, price, insulation)
+              },
+            ),
+            // Divider between utility chips and categories
+            Container(
+              margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
+              width: 1,
+              color: _kBorder,
+            ),
+
+            // Real category chips
+            ...categories.map((cat) {
+              final isSelected = selectedCategoryId.value == cat['id'];
+              return _filterChip(
+                label: cat['name']!,
+                isSelected: isSelected,
+                onTap: () async {
+                  selectedCategoryId.value = cat['id']!;
+                  if (isSearch) {
                     final all = Get.arguments?['results'] ?? [];
                     if (cat['id'] == "all") {
                       productController.productList.assignAll(all);
@@ -325,396 +184,471 @@ class _AllProductsPageState extends State<AllProductsPage>
                             .toList(),
                       );
                     }
-                  });
-                } else {
-                  if (cat['id'] == "all") {
-                    await productController.fetchProducts();
                   } else {
-                    await productController.fetchProductsByCategory(cat['id']!);
+                    if (cat['id'] == "all") {
+                      await productController.fetchProducts();
+                    } else {
+                      await productController.fetchProductsByCategory(
+                        cat['id']!,
+                      );
+                    }
                   }
-                }
-              },
-            );
-          },
-        ),
-      );
-    });
-  }
-}
-
-// ── Category chip ──────────────────────────────────────────────────
-class _CategoryChip extends StatelessWidget {
-  final String label;
-  final bool isSelected;
-  final VoidCallback onTap;
-
-  const _CategoryChip({
-    required this.label,
-    required this.isSelected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        margin: const EdgeInsets.only(right: 8),
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
-        decoration: BoxDecoration(
-          color: isSelected ? _kPrimary : Colors.white,
-          borderRadius: BorderRadius.circular(22),
-          border: Border.all(
-            color: isSelected ? _kPrimary : Colors.grey.shade200,
-            width: 1.5,
-          ),
-          boxShadow: isSelected
-              ? [
-                  BoxShadow(
-                    color: _kPrimary.withOpacity(0.3),
-                    blurRadius: 8,
-                    offset: const Offset(0, 3),
-                  ),
-                ]
-              : [],
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: isSelected ? Colors.white : _kTextMuted,
-            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-            fontSize: 13,
-            letterSpacing: 0.1,
-          ),
-        ),
-      ),
+                },
+              );
+            }),
+          ],
+        );
+      }),
     );
   }
-}
 
-// ── Product card ───────────────────────────────────────────────────
-class _ProductCard extends StatelessWidget {
-  final dynamic product;
-  final int index;
-
-  const _ProductCard({required this.product, required this.index});
-
-  @override
-  Widget build(BuildContext context) {
-    final bool isOutOfStock = (product.stock ?? 0) == 0;
-    final bool isLowStock =
-        !isOutOfStock && (product.stock ?? 0) > 0 && (product.stock ?? 0) <= 5;
-
-    final double originalPrice = (product.price as num).toDouble();
-    final double discountedPrice = (product.discounted_price as num).toDouble();
-    final bool hasDiscount = discountedPrice < originalPrice;
-    final int discountPct = hasDiscount
-        ? ((1 - discountedPrice / originalPrice) * 100).round()
-        : 0;
-
-    return GestureDetector(
-      onTap: () => Get.to(() => ProductDetailsPage(product: product)),
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 14),
-        decoration: BoxDecoration(
-          color: _kCard,
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.06),
-              blurRadius: 16,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(20),
-          child: Stack(
+  Widget _filterChip({
+    required String label,
+    IconData? icon,
+    bool isSelected = false,
+    required VoidCallback onTap,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+      child: GestureDetector(
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          decoration: BoxDecoration(
+            color: isSelected ? _kPrimary : Colors.white,
+            border: Border.all(color: isSelected ? _kPrimary : _kBorder),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              // ── Left green accent bar ──────────────────────────
-              Positioned(
-                left: 0,
-                top: 0,
-                bottom: 0,
-                child: Container(
-                  width: 4,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: isOutOfStock
-                          ? [Colors.grey.shade300, Colors.grey.shade200]
-                          : [_kPrimary, _kPrimaryDark],
-                    ),
-                  ),
+              if (icon != null) ...[
+                Icon(
+                  icon,
+                  size: 15,
+                  color: isSelected ? Colors.white : _kTextPrimary,
+                ),
+                const SizedBox(width: 5),
+              ],
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: isSelected ? Colors.white : _kTextPrimary,
                 ),
               ),
-
-              // ── Main content ───────────────────────────────────
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // ── Image container ────────────────────────
-                    Stack(
-                      children: [
-                        Container(
-                          width: 110,
-                          height: 110,
-                          decoration: BoxDecoration(
-                            color: isOutOfStock
-                                ? Colors.grey.shade100
-                                : _kBadgeBg,
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          child: Padding(
-                            padding: const EdgeInsets.all(10),
-                            child: Opacity(
-                              opacity: isOutOfStock ? 0.4 : 1.0,
-                              child: Image.network(
-                                product.image,
-                                fit: BoxFit.contain,
-                              ),
-                            ),
-                          ),
-                        ),
-                        // Discount badge
-                        if (hasDiscount && !isOutOfStock)
-                          Positioned(
-                            top: 6,
-                            left: 6,
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 6,
-                                vertical: 3,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Colors.red.shade500,
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: Text(
-                                "-$discountPct%",
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w800,
-                                ),
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-
-                    const SizedBox(width: 14),
-
-                    // ── Info ───────────────────────────────────
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Name
-                          Text(
-                            product.name,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontWeight: FontWeight.w700,
-                              fontSize: 15,
-                              color: isOutOfStock
-                                  ? Colors.grey.shade400
-                                  : _kTextPrimary,
-                              height: 1.3,
-                            ),
-                          ),
-
-                          const SizedBox(height: 5),
-
-                          // Unit
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 3,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.grey.shade100,
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Text(
-                              "${product.unit_size} ${product.unit_name}",
-                              style: TextStyle(
-                                color: Colors.grey.shade600,
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-
-                          const SizedBox(height: 10),
-
-                          // Price row
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            children: [
-                              Text(
-                                "₹${discountedPrice.toStringAsFixed(0)}",
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w800,
-                                  fontSize: 20,
-                                  color: isOutOfStock
-                                      ? Colors.grey.shade400
-                                      : _kPrimaryDark,
-                                  letterSpacing: -0.5,
-                                ),
-                              ),
-                              if (hasDiscount) ...[
-                                const SizedBox(width: 6),
-                                Padding(
-                                  padding: const EdgeInsets.only(bottom: 2),
-                                  child: Text(
-                                    "₹${originalPrice.toStringAsFixed(0)}",
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.w500,
-                                      fontSize: 13,
-                                      color: Colors.grey.shade400,
-                                      decoration: TextDecoration.lineThrough,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ],
-                          ),
-
-                          const SizedBox(height: 8),
-
-                          // Stock badge
-                          _StockBadge(
-                            stock: product.stock ?? 0,
-                            isOutOfStock: isOutOfStock,
-                            isLowStock: isLowStock,
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    // ── Arrow ──────────────────────────────────
-                    Padding(
-                      padding: const EdgeInsets.only(top: 4),
-                      child: Icon(
-                        Icons.arrow_forward_ios_rounded,
-                        size: 14,
-                        color: isOutOfStock
-                            ? Colors.grey.shade300
-                            : Colors.grey.shade400,
-                      ),
-                    ),
-                  ],
+              if (icon != null) ...[
+                const SizedBox(width: 3),
+                Icon(
+                  Icons.keyboard_arrow_down_rounded,
+                  size: 16,
+                  color: isSelected ? Colors.white : _kTextMuted,
                 ),
-              ),
+              ],
             ],
           ),
         ),
       ),
     );
   }
-}
 
-// ── Stock badge ────────────────────────────────────────────────────
-class _StockBadge extends StatelessWidget {
-  final int stock;
-  final bool isOutOfStock;
-  final bool isLowStock;
-
-  const _StockBadge({
-    required this.stock,
-    required this.isOutOfStock,
-    required this.isLowStock,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    if (isOutOfStock) {
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-        decoration: BoxDecoration(
-          color: Colors.red.shade50,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: Colors.red.shade100),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.remove_shopping_cart_rounded,
-              size: 12,
-              color: Colors.red.shade400,
-            ),
-            const SizedBox(width: 5),
-            Text(
-              "Out of Stock",
-              style: TextStyle(
-                color: Colors.red.shade500,
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    if (isLowStock) {
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-        decoration: BoxDecoration(
-          color: Colors.orange.shade50,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: Colors.orange.shade100),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.warning_amber_rounded,
-              size: 12,
-              color: Colors.orange.shade600,
-            ),
-            const SizedBox(width: 5),
-            Text(
-              "Only $stock left",
-              style: TextStyle(
-                color: Colors.orange.shade700,
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
+  // ── Shop by brands ──────────────────────────────────────────────
+  Widget _buildBrandsSection() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        color: _kBadgeBg,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
+      margin: const EdgeInsets.only(top: 8),
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+      color: const Color(0xFFF7F3E9),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.check_circle_rounded, size: 12, color: _kPrimary),
-          const SizedBox(width: 5),
-          Text(
-            "In Stock",
-            style: const TextStyle(
-              color: _kPrimaryDark,
-              fontSize: 12,
+          const Text(
+            "Shop by brands",
+            style: TextStyle(
+              fontSize: 17,
               fontWeight: FontWeight.w700,
+              color: _kTextPrimary,
+            ),
+          ),
+          const SizedBox(height: 14),
+          SizedBox(
+            height: 96,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: _brands.length,
+              separatorBuilder: (_, _) => const SizedBox(width: 14),
+              itemBuilder: (context, index) {
+                final brand = _brands[index];
+                return Column(
+                  children: [
+                    Container(
+                      width: 68,
+                      height: 68,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: _kBorder),
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(
+                        brand['name']!.substring(0, 1),
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w800,
+                          color: _kTextPrimary,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      brand['name']!,
+                      style: const TextStyle(fontSize: 12, color: _kTextMuted),
+                    ),
+                  ],
+                );
+              },
             ),
           ),
         ],
       ),
     );
+  }
+}
+
+// ── Product card (grid style) ───────────────────────────────────────
+class _ProductCard extends StatelessWidget {
+  final dynamic product;
+
+  const _ProductCard({required this.product});
+
+  @override
+  Widget build(BuildContext context) {
+    final int stock = (product.stock ?? 0) as int;
+    final bool isOutOfStock = stock == 0;
+    final bool isLowStock = !isOutOfStock && stock <= 5;
+
+    final double originalPrice = (product.price as num).toDouble();
+    final double discountedPrice = (product.discounted_price as num).toDouble();
+    final bool hasDiscount = discountedPrice < originalPrice;
+    final double savedAmount = originalPrice - discountedPrice;
+    final int discountPct = hasDiscount
+        ? ((1 - discountedPrice / originalPrice) * 100).round()
+        : 0;
+
+    // These fields may not exist yet on your ProductModel — fall back safely.
+    final double rating = (_tryGet(product, 'rating') as num?)?.toDouble() ?? 0;
+    final int reviewCount =
+        (_tryGet(product, 'reviewCount') as num?)?.toInt() ?? 0;
+    final String deliveryTime =
+        (_tryGet(product, 'deliveryTime') as String?) ?? "15 mins";
+
+    return GestureDetector(
+      onTap: () => Get.to(() => ProductDetailsPage(product: product)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // ── Image block ──────────────────────────────────────
+          AspectRatio(
+            aspectRatio: 1,
+            child: Container(
+              decoration: BoxDecoration(
+                color: const Color(0xFFF3F4F6),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: _kBorder),
+              ),
+              child: Stack(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.all(8),
+                    child: Opacity(
+                      opacity: isOutOfStock ? 0.4 : 1.0,
+                      child: Image.network(product.image, fit: BoxFit.contain),
+                    ),
+                  ),
+
+                  // Favorite heart
+                  Positioned(
+                    top: 4,
+                    right: 4,
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: const BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.favorite_border_rounded,
+                        size: 12,
+                        color: _kTextMuted,
+                      ),
+                    ),
+                  ),
+
+                  // Image carousel dots (static placeholder — wire to
+                  // a real PageView if the product has multiple images)
+                  Positioned(
+                    bottom: 28,
+                    left: 0,
+                    right: 0,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: List.generate(3, (i) {
+                        return Container(
+                          margin: const EdgeInsets.symmetric(horizontal: 1.5),
+                          width: 3.5,
+                          height: 3.5,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: i == 0
+                                ? _kTextMuted
+                                : _kTextMuted.withOpacity(0.3),
+                          ),
+                        );
+                      }),
+                    ),
+                  ),
+
+                  // Unit size badge (bottom-left)
+                  Positioned(
+                    bottom: 4,
+                    left: 4,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 5,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(5),
+                        border: Border.all(color: _kBorder),
+                      ),
+                      child: Text(
+                        "${product.unit_size} ${product.unit_name}",
+                        style: const TextStyle(
+                          fontSize: 9,
+                          fontWeight: FontWeight.w600,
+                          color: _kTextPrimary,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  // VIEW button (bottom-right)
+                  Positioned(
+                    bottom: 4,
+                    right: 4,
+                    child: isOutOfStock
+                        ? Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.grey.shade200,
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: const Text(
+                              "VIEW",
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w800,
+                                color: Colors.grey,
+                              ),
+                            ),
+                          )
+                        : GestureDetector(
+                            onTap: () => Get.to(
+                              () => ProductDetailsPage(product: product),
+                            ),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(
+                                  color: _kPrimary,
+                                  width: 1.2,
+                                ),
+                              ),
+                              child: const Text(
+                                "VIEW",
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w800,
+                                  color: _kPrimaryDark,
+                                ),
+                              ),
+                            ),
+                          ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 8),
+
+          // ── Price row ────────────────────────────────────────
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                "₹${discountedPrice.toStringAsFixed(0)}",
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w800,
+                  color: isOutOfStock ? Colors.grey.shade400 : _kTextPrimary,
+                ),
+              ),
+              if (hasDiscount) ...[
+                const SizedBox(width: 4),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 1.5),
+                  child: Text(
+                    "₹${originalPrice.toStringAsFixed(0)}",
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: Colors.grey.shade400,
+                      decoration: TextDecoration.lineThrough,
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+
+          if (hasDiscount)
+            Padding(
+              padding: const EdgeInsets.only(top: 1),
+              child: Text(
+                discountPct > 0 && discountPct < 100
+                    ? "$discountPct% OFF"
+                    : "₹${savedAmount.toStringAsFixed(0)} OFF",
+                style: const TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
+                  color: _kDiscountBlue,
+                ),
+              ),
+            ),
+
+          const SizedBox(height: 3),
+
+          // ── Name ─────────────────────────────────────────────
+          Text(
+            product.name,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 11.5,
+              fontWeight: FontWeight.w600,
+              height: 1.2,
+              color: isOutOfStock ? Colors.grey.shade400 : _kTextPrimary,
+            ),
+          ),
+
+          const SizedBox(height: 3),
+
+          // ── Rating ───────────────────────────────────────────
+          if (rating > 0)
+            Row(
+              children: [
+                const Icon(Icons.star_rounded, size: 12, color: _kStar),
+                const SizedBox(width: 2),
+                Text(
+                  rating.toStringAsFixed(1),
+                  style: const TextStyle(
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w700,
+                    color: _kTextPrimary,
+                  ),
+                ),
+                if (reviewCount > 0) ...[
+                  const SizedBox(width: 3),
+                  Text(
+                    "$reviewCount",
+                    style: const TextStyle(fontSize: 10, color: _kTextMuted),
+                  ),
+                ],
+              ],
+            ),
+
+          const SizedBox(height: 2),
+
+          // ── Delivery time + stock ────────────────────────────
+          Wrap(
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 5,
+            children: [
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.bolt_rounded,
+                    size: 11,
+                    color: Colors.grey.shade500,
+                  ),
+                  const SizedBox(width: 1),
+                  Text(
+                    deliveryTime,
+                    style: TextStyle(fontSize: 10, color: Colors.grey.shade600),
+                  ),
+                ],
+              ),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.inventory_2_outlined,
+                    size: 10,
+                    color: isOutOfStock
+                        ? Colors.red.shade300
+                        : isLowStock
+                        ? Colors.orange.shade400
+                        : Colors.grey.shade400,
+                  ),
+                  const SizedBox(width: 1),
+                  Text(
+                    isOutOfStock ? "Out of stock" : "$stock left",
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                      color: isOutOfStock
+                          ? Colors.red.shade400
+                          : isLowStock
+                          ? Colors.orange.shade600
+                          : Colors.grey.shade500,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Safe dynamic field access so this compiles even if the field
+  // doesn't exist on ProductModel yet — replace with direct field
+  // access once you add rating / reviewCount / deliveryTime.
+  dynamic _tryGet(dynamic obj, String field) {
+    try {
+      switch (field) {
+        case 'rating':
+          return obj.rating;
+        case 'reviewCount':
+          return obj.reviewCount;
+        case 'deliveryTime':
+          return obj.deliveryTime;
+      }
+    } catch (_) {
+      return null;
+    }
+    return null;
   }
 }

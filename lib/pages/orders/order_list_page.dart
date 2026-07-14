@@ -8,7 +8,6 @@ class OrderPage extends StatelessWidget {
   OrderPage({super.key});
 
   final OrderController controller = Get.put(OrderController());
-  final OrderController orderController = Get.put(OrderController());
 
   Color getStatusColor(String status) {
     switch (status) {

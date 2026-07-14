@@ -5,6 +5,8 @@ import 'package:instant_delivery/controllers/wishlist_controller.dart';
 class WishlistPage extends StatelessWidget {
   final WishlistController wishlistController = Get.put(WishlistController());
 
+  WishlistPage({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(

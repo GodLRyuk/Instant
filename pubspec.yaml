@@ -62,6 +62,7 @@ dependencies:
   awesome_notifications: ^0.10.0
   awesome_notifications_fcm: ^0.10.0
   web_socket_channel: ^3.0.1
+  flutter_middleware: ^0.0.5+4
 
 dev_dependencies:
   flutter_test:

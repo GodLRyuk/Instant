@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:instant_delivery/controllers/orderDetails_controller.dart';
-import 'package:instant_delivery/pages/orders/order_tracking_screen.dart';
 import 'package:instant_delivery/widgets/navigation/custom_app_bar.dart';
 import 'package:intl/intl.dart';
 
@@ -133,52 +132,6 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
               else
                 _buildCancelledCard(),
 
-              // ── TRACK ORDER BUTTON ───────────────────────────────────
-              if (!isCancelled &&
-                  (status == 'SHIPPED' ||
-                      status == 'OUT_FOR_DELIVERY' ||
-                      status == 'ASSIGNED'))
-                Padding(
-                  padding: const EdgeInsets.only(top: 16),
-                  child: SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed: () {
-                        Get.to(
-                          () => OrderTrackingScreen(
-                            orderId: widget.orderId,
-                            // Pass last known driver coords so map shows immediately
-                            initialLat: double.tryParse(
-                              order['driver_lat']?.toString() ?? '',
-                            ),
-                            initialLng: double.tryParse(
-                              order['driver_lng']?.toString() ?? '',
-                            ),
-                          ),
-                          transition: Transition.rightToLeft,
-                        );
-                      },
-                      icon: const Icon(Icons.location_on, size: 20),
-                      label: const Text(
-                        'Track Live Location',
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF3CB549),
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        elevation: 0,
-                      ),
-                    ),
-                  ),
-                ),
-
               const SizedBox(height: 20),
 
               // ── SCHEDULED INFO (if applicable) ───────────────
@@ -249,7 +202,7 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
   // ── PROGRESS TRACKER ────────────────────────────────────
   Widget _buildProgressTracker(String status, Map order) {
     // Check if driver is assigned from order data
-    final driverName = order['driver_name'] ?? order['assigned_driver'] ?? null;
+    final driverName = order['driver_name'] ?? order['assigned_driver'];
     final hasDriver = driverName != null && driverName.toString().isNotEmpty;
     final current = _currentStep(status, hasDriver);
 

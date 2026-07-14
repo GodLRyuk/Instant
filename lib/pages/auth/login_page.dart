@@ -7,7 +7,7 @@ import 'package:instant_delivery/widgets/buttons/custom_button.dart';
 import '../../controllers/auth_controller.dart';
 
 class LoginPage extends StatefulWidget {
-  LoginPage({super.key});
+  const LoginPage({super.key});
 
   @override
   State<LoginPage> createState() => _LoginPageState();

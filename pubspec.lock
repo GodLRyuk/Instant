@@ -374,6 +374,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "6.0.0"
+  flutter_middleware:
+    dependency: "direct main"
+    description:
+      name: flutter_middleware
+      sha256: a71b0118c007b801d4d07909ac007f02ecd9238bdf65c25b768ab41e93917b5e
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.0.5+4"
   flutter_plugin_android_lifecycle:
     dependency: transitive
     description:

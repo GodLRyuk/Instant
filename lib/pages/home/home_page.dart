@@ -1,5 +1,4 @@
 import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:instant_delivery/controllers/bundle_controller.dart';
@@ -52,6 +51,32 @@ class _HomePageState extends State<HomePage> {
     tag: "flash",
   );
   final WishlistController wishlistController = Get.put(WishlistController());
+
+  // ── Dynamic curated category banner sections ─────────────────────
+  // Instead of a fixed list, a section is generated automatically for
+  // every real category in categoryController.categoryList. The title
+  // and subtitle vary per category using the templates below — swap
+  // "{category}" for the actual category name (e.g. "Chocolate
+  // temptations await" for a "Chocolate" category, "Stock up on
+  // Snacks" for a "Snacks" category, etc). Templates rotate by
+  // category index so results are varied but consistent on rebuild.
+  final List<String> _sectionTitleTemplates = const [
+    "{category} temptations await",
+    "Discover more {category}",
+    "Stock up on {category}",
+    "Freshly picked {category}",
+    "Top picks in {category}",
+    "Everything {category}",
+  ];
+
+  final List<String> _sectionSubtitleTemplates = const [
+    "Handpicked {category} just for you",
+    "Best sellers in {category}",
+    "Everything you need in {category}",
+    "Loved by our customers",
+    "Curated picks, just for you",
+  ];
+
   @override
   void initState() {
     super.initState();
@@ -198,16 +223,7 @@ class _HomePageState extends State<HomePage> {
               SizedBox(height: height * 0.01),
 
               // 🔥 Categories Title
-              Padding(
-                padding: EdgeInsets.symmetric(horizontal: width * 0.04),
-                child: Text(
-                  'Categories',
-                  style: TextStyle(
-                    fontSize: width * 0.045,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
+              _sectionHeader(width, title: 'Categories'),
 
               SizedBox(height: height * 0.005),
               // ✅ GETX CATEGORY LIST
@@ -320,199 +336,39 @@ class _HomePageState extends State<HomePage> {
               FlashSaleStrip(controller: flashSaleController),
 
               // 🔥 Products Title
-              Padding(
-                padding: EdgeInsets.symmetric(horizontal: width * 0.05),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'New Arrival',
-                      style: TextStyle(
-                        fontSize: width * 0.045,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    TextButton(
-                      onPressed: () {
-                        Get.to(() => AllProductsPage());
-                      },
-                      child: Text(
-                        "View All",
-                        style: TextStyle(
-                          fontSize: width * 0.040,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+              _sectionHeader(
+                width,
+                title: 'New Arrival',
+                onViewAll: () => Get.to(() => AllProductsPage()),
               ),
 
               SizedBox(height: height * 0.015),
 
-              // ✅ PRODUCT GRID
+              // ✅ NEW ARRIVAL — 3-column grid, category-style cards
               Padding(
-                padding: EdgeInsets.symmetric(horizontal: width * 0.05),
+                padding: EdgeInsets.symmetric(horizontal: width * 0.04),
                 child: Obx(() {
-                  if (productController.isLoading.value) {
+                  if (newArrivalController.isLoading.value) {
                     return const Center(child: CircularProgressIndicator());
                   }
                   final newArrival = newArrivalController.newArrivalList;
+                  final displayCount = newArrival.length > 6
+                      ? 6
+                      : newArrival.length;
                   return GridView.builder(
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
-                    // itemCount: newArrivalController.productList.length,
-                    itemCount: newArrival.length > 4 ? 4 : newArrival.length,
-
+                    itemCount: displayCount,
                     gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      crossAxisSpacing: width * 0.03,
-                      mainAxisSpacing: height * 0.02,
-                      childAspectRatio: 0.85,
+                      crossAxisCount: 3,
+                      crossAxisSpacing: width * 0.025,
+                      mainAxisSpacing: height * 0.015,
+                      childAspectRatio: 0.6,
                     ),
-                    itemBuilder: (context, index) {
-                      final product = newArrival[index];
-
-                      return Container(
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(width * 0.04),
-                          boxShadow: [
-                            BoxShadow(color: Colors.black12, blurRadius: 5),
-                          ],
-                        ),
-                        child: Stack(
-                          children: [
-                            Padding(
-                              padding: const EdgeInsets.all(8.0),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  // 🔥 Product Image
-                                  Expanded(
-                                    child: ClipRRect(
-                                      borderRadius: BorderRadius.vertical(
-                                        top: Radius.circular(width * 0.04),
-                                      ),
-                                      child: Image.network(
-                                        product.image,
-                                        width: double.infinity,
-                                        fit: BoxFit.contain,
-                                      ),
-                                    ),
-                                  ),
-
-                                  Padding(
-                                    padding: EdgeInsets.symmetric(
-                                      horizontal: width * 0.02,
-                                      vertical: height * 0.008,
-                                    ),
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        // 🔥 Product Name
-                                        Text(
-                                          product.name,
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: TextStyle(
-                                            fontSize: width * 0.035,
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
-
-                                        // 🔥 Price
-                                        Text(
-                                          "₹${product.price}",
-                                          style: TextStyle(
-                                            color: Colors.green,
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: width * 0.035,
-                                          ),
-                                        ),
-                                        SizedBox(height: height * 0.005),
-
-                                        // 🔥 Add to Cart Button
-                                        GestureDetector(
-                                          onTap: () {
-                                            Get.to(
-                                              () => ProductDetailsPage(
-                                                product: product,
-                                              ),
-                                            );
-                                          },
-                                          child: Container(
-                                            width: double.infinity,
-                                            padding: EdgeInsets.symmetric(
-                                              vertical: height * 0.008,
-                                            ),
-                                            decoration: BoxDecoration(
-                                              color: Colors.green,
-                                              borderRadius:
-                                                  BorderRadius.circular(
-                                                    width * 0.02,
-                                                  ),
-                                            ),
-                                            child: Center(
-                                              child: Text(
-                                                "View",
-                                                style: TextStyle(
-                                                  color: Colors.white,
-                                                  fontSize: width * 0.035,
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            Positioned(
-                              top: 4,
-                              right: 4,
-                              child: Obx(
-                                () => GestureDetector(
-                                  onTap: () =>
-                                      wishlistController.toggle(product),
-                                  child: Container(
-                                    width: 30,
-                                    height: 30,
-                                    decoration: BoxDecoration(
-                                      color: Colors.white,
-                                      shape: BoxShape.circle,
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: Colors.black12,
-                                          blurRadius: 4,
-                                        ),
-                                      ],
-                                    ),
-                                    child: Icon(
-                                      wishlistController.isWishlisted(
-                                            product.id,
-                                          )
-                                          ? Icons.favorite
-                                          : Icons.favorite_border,
-                                      size: 16,
-                                      color:
-                                          wishlistController.isWishlisted(
-                                            product.id,
-                                          )
-                                          ? Color(0xFFE0386A)
-                                          : Colors.grey,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
+                    itemBuilder: (context, index) => _PromoProductCard(
+                      product: newArrival[index],
+                      wishlistController: wishlistController,
+                    ),
                   );
                 }),
               ),
@@ -522,193 +378,39 @@ class _HomePageState extends State<HomePage> {
 
               SizedBox(height: height * 0.015),
               if (recommendedController.recommendedList.isNotEmpty) ...[
-                Padding(
-                  padding: EdgeInsets.symmetric(horizontal: width * 0.05),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Recommended for you',
-                        style: TextStyle(
-                          fontSize: width * 0.045,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      TextButton(
-                        onPressed: () {
-                          Get.to(() => AllProductsPage());
-                        },
-                        child: Text(
-                          "View All",
-                          style: TextStyle(
-                            fontSize: width * 0.040,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+                _sectionHeader(
+                  width,
+                  title: 'Recommended for you',
+                  onViewAll: () => Get.to(() => AllProductsPage()),
                 ),
 
                 SizedBox(height: height * 0.015),
 
                 // 🔥 Horizontal Product List (Different Design)
-                SizedBox(
-                  height: height * 0.23,
-                  width: double.infinity,
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: width * 0.04),
                   child: Obx(() {
                     if (recommendedController.isLoading.value) {
                       return const Center(child: CircularProgressIndicator());
                     }
-                    return ListView.builder(
-                      scrollDirection: Axis.horizontal,
-                      itemCount: recommendedController.recommendedList.length,
-                      itemBuilder: (context, index) {
-                        final product =
-                            recommendedController.recommendedList[index];
-
-                        return Container(
-                          width: width * 0.4,
-                          margin: EdgeInsets.only(
-                            left: width * 0.04,
-                            bottom: height * 0.005,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(width * 0.04),
-                            boxShadow: [
-                              BoxShadow(color: Colors.black12, blurRadius: 6),
-                            ],
-                          ),
-                          child: Stack(
-                            children: [
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  // 🔥 Image
-                                  Expanded(
-                                    child: Padding(
-                                      padding: const EdgeInsets.only(top: 4.0),
-                                      child: ClipRRect(
-                                        borderRadius: BorderRadius.vertical(
-                                          top: Radius.circular(width * 0.04),
-                                        ),
-                                        child: Image.network(
-                                          product.image,
-                                          width: double.infinity,
-                                          fit: BoxFit.contain,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-
-                                  Padding(
-                                    padding: const EdgeInsets.all(15.0),
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        // 🔥 Name
-                                        Text(
-                                          product.name,
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: TextStyle(
-                                            fontSize: width * 0.035,
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
-
-                                        SizedBox(height: height * 0.005),
-
-                                        // 🔥 Price
-                                        Text(
-                                          "₹${product.price}",
-                                          style: TextStyle(
-                                            color: Colors.green,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-
-                                        SizedBox(height: height * 0.008),
-
-                                        // 🔥 Add Button (Small pill style)
-                                        GestureDetector(
-                                          onTap: () {
-                                            Get.to(
-                                              () => ProductDetailsPage(
-                                                product: product,
-                                              ),
-                                            );
-                                          },
-                                          child: Container(
-                                            padding: EdgeInsets.symmetric(
-                                              vertical: height * 0.006,
-                                            ),
-                                            decoration: BoxDecoration(
-                                              color: Colors.green,
-                                              borderRadius:
-                                                  BorderRadius.circular(
-                                                    width * 0.02,
-                                                  ),
-                                            ),
-                                            child: const Center(
-                                              child: Text(
-                                                "View",
-                                                style: TextStyle(
-                                                  color: Colors.white,
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              Positioned(
-                                top: 4,
-                                right: 4,
-                                child: Obx(
-                                  () => GestureDetector(
-                                    onTap: () =>
-                                        wishlistController.toggle(product),
-                                    child: Container(
-                                      width: 28,
-                                      height: 28,
-                                      decoration: BoxDecoration(
-                                        color: Colors.white,
-                                        shape: BoxShape.circle,
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: Colors.black12,
-                                            blurRadius: 4,
-                                          ),
-                                        ],
-                                      ),
-                                      child: Icon(
-                                        wishlistController.isWishlisted(
-                                              product.id,
-                                            )
-                                            ? Icons.favorite
-                                            : Icons.favorite_border,
-                                        size: 16,
-                                        color:
-                                            wishlistController.isWishlisted(
-                                              product.id,
-                                            )
-                                            ? Color(0xFFE0386A)
-                                            : Colors.grey,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-                      },
+                    final recommended = recommendedController.recommendedList;
+                    final displayCount = recommended.length > 6
+                        ? 6
+                        : recommended.length;
+                    return GridView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: displayCount,
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 3,
+                        crossAxisSpacing: width * 0.025,
+                        mainAxisSpacing: height * 0.015,
+                        childAspectRatio: 0.6,
+                      ),
+                      itemBuilder: (context, index) => _PromoProductCard(
+                        product: recommended[index],
+                        wishlistController: wishlistController,
+                      ),
                     );
                   }),
                 ),
@@ -773,84 +475,23 @@ class _HomePageState extends State<HomePage> {
               }),
               SizedBox(height: height * 0.02),
               // 🔥 Featured Products Title
-              // ✅ PRODUCTS SECTION — Horizontal Strip Design
+              // ✅ PRODUCTS SECTION — 3-column grid
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // ── Header ──────────────────────────────────
-                  Padding(
-                    padding: EdgeInsets.symmetric(horizontal: width * 0.05),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        RichText(
-                          text: TextSpan(
-                            children: [
-                              TextSpan(
-                                text: 'Top\n',
-                                style: TextStyle(
-                                  fontSize: width * 0.08,
-                                  fontWeight: FontWeight.w900,
-                                  color: Colors.green.shade700,
-                                  height: 1.0,
-                                  letterSpacing: -1,
-                                ),
-                              ),
-                              TextSpan(
-                                text: 'Picks',
-                                style: TextStyle(
-                                  fontSize: width * 0.08,
-                                  fontWeight: FontWeight.w900,
-                                  color: Colors.grey[900],
-                                  height: 1.0,
-                                  letterSpacing: -1,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        GestureDetector(
-                          onTap: () => Get.to(() => AllProductsPage()),
-                          child: Row(
-                            children: [
-                              Text(
-                                'See all',
-                                style: TextStyle(
-                                  fontSize: width * 0.035,
-                                  color: Colors.green.shade700,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              SizedBox(width: 4),
-                              Container(
-                                padding: const EdgeInsets.all(4),
-                                decoration: BoxDecoration(
-                                  color: Colors.green.shade700,
-                                  shape: BoxShape.circle,
-                                ),
-                                child: Icon(
-                                  Icons.arrow_forward,
-                                  size: 12,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
+                  _sectionHeader(
+                    width,
+                    title: 'Top Picks',
+                    onViewAll: () => Get.to(() => AllProductsPage()),
                   ),
 
                   SizedBox(height: height * 0.018),
 
-                  // ── Horizontal card list ─────────────────────
+                  // ── 3-column grid ─────────────────────────────
                   Obx(() {
                     if (productController.isLoading.value) {
-                      return SizedBox(
-                        height: height * 0.26,
-                        child: const Center(child: CircularProgressIndicator()),
-                      );
+                      return const Center(child: CircularProgressIndicator());
                     }
 
                     final products = productController.productList;
@@ -858,214 +499,61 @@ class _HomePageState extends State<HomePage> {
                         ? 6
                         : products.length;
 
-                    return SizedBox(
-                      height: height * 0.23,
-                      child: ListView.builder(
-                        scrollDirection: Axis.horizontal,
-                        padding: EdgeInsets.only(left: width * 0.05),
+                    return Padding(
+                      padding: EdgeInsets.symmetric(horizontal: width * 0.04),
+                      child: GridView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
                         itemCount: displayCount,
-                        itemBuilder: (context, index) {
-                          final product = products[index];
-
-                          return GestureDetector(
-                            onTap: () => Get.to(
-                              () => ProductDetailsPage(product: product),
-                            ),
-                            child: Container(
-                              width: width * 0.36,
-                              margin: EdgeInsets.only(
-                                right: width * 0.03,
-                                bottom: 4,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(20),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.07),
-                                    blurRadius: 12,
-                                    offset: const Offset(0, 4),
-                                  ),
-                                ],
-                              ),
-                              child: Stack(
-                                children: [
-                                  Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      // Image with index badge
-                                      Stack(
-                                        children: [
-                                          Container(
-                                            height: height * 0.14,
-                                            decoration: BoxDecoration(
-                                              color: index.isEven
-                                                  ? Colors.white
-                                                  : Colors.white,
-                                              borderRadius:
-                                                  const BorderRadius.vertical(
-                                                    top: Radius.circular(20),
-                                                  ),
-                                            ),
-                                            child: ClipRRect(
-                                              borderRadius:
-                                                  const BorderRadius.vertical(
-                                                    top: Radius.circular(20),
-                                                  ),
-                                              child: Image.network(
-                                                product.image,
-                                                width: double.infinity,
-                                                fit: BoxFit.contain,
-                                                errorBuilder: (_, __, ___) =>
-                                                    Icon(
-                                                      Icons.image_not_supported,
-                                                      color: Colors.grey[300],
-                                                    ),
-                                              ),
-                                            ),
-                                          ),
-                                          // Index badge
-                                          Positioned(
-                                            top: 8,
-                                            left: 8,
-                                            child: Container(
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                    horizontal: 8,
-                                                    vertical: 3,
-                                                  ),
-                                              decoration: BoxDecoration(
-                                                color: Colors.grey[900],
-                                                borderRadius:
-                                                    BorderRadius.circular(20),
-                                              ),
-                                              child: Text(
-                                                '#${index + 1}',
-                                                style: const TextStyle(
-                                                  color: Colors.white,
-                                                  fontSize: 10,
-                                                  fontWeight: FontWeight.w800,
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-
-                                      // Info
-                                      Expanded(
-                                        child: Padding(
-                                          padding: const EdgeInsets.fromLTRB(
-                                            10,
-                                            8,
-                                            10,
-                                            10,
-                                          ),
-                                          child: Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.spaceBetween,
-                                            children: [
-                                              Text(
-                                                product.name,
-                                                maxLines: 1,
-                                                overflow: TextOverflow.ellipsis,
-                                                style: TextStyle(
-                                                  fontSize: width * 0.032,
-                                                  fontWeight: FontWeight.w700,
-                                                  color: Colors.grey[850],
-                                                ),
-                                              ),
-                                              Row(
-                                                mainAxisAlignment:
-                                                    MainAxisAlignment
-                                                        .spaceBetween,
-                                                children: [
-                                                  Text(
-                                                    '₹${product.price.toStringAsFixed(0)}',
-                                                    style: TextStyle(
-                                                      color:
-                                                          Colors.green.shade700,
-                                                      fontWeight:
-                                                          FontWeight.w800,
-                                                      fontSize: width * 0.038,
-                                                    ),
-                                                  ),
-                                                  Container(
-                                                    padding:
-                                                        const EdgeInsets.all(6),
-                                                    decoration: BoxDecoration(
-                                                      color:
-                                                          Colors.green.shade700,
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                            10,
-                                                          ),
-                                                    ),
-                                                    child: const Icon(
-                                                      Icons.arrow_forward,
-                                                      color: Colors.white,
-                                                      size: 14,
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  Positioned(
-                                    top: 4,
-                                    right: 4,
-                                    child: Obx(
-                                      () => GestureDetector(
-                                        onTap: () =>
-                                            wishlistController.toggle(product),
-                                        child: Container(
-                                          width: 28,
-                                          height: 28,
-                                          decoration: BoxDecoration(
-                                            color: Colors.white,
-                                            shape: BoxShape.circle,
-                                            boxShadow: [
-                                              BoxShadow(
-                                                color: Colors.black12,
-                                                blurRadius: 4,
-                                              ),
-                                            ],
-                                          ),
-                                          child: Icon(
-                                            wishlistController.isWishlisted(
-                                                  product.id,
-                                                )
-                                                ? Icons.favorite
-                                                : Icons.favorite_border,
-                                            size: 16,
-                                            color:
-                                                wishlistController.isWishlisted(
-                                                  product.id,
-                                                )
-                                                ? Color(0xFFE0386A)
-                                                : Colors.grey,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          );
-                        },
+                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 3,
+                          crossAxisSpacing: width * 0.025,
+                          mainAxisSpacing: height * 0.015,
+                          childAspectRatio: 0.6,
+                        ),
+                        itemBuilder: (context, index) => _PromoProductCard(
+                          product: products[index],
+                          wishlistController: wishlistController,
+                        ),
                       ),
                     );
                   }),
                 ],
               ),
+
+              SizedBox(height: height * 0.02),
+
+              // ══════════════════════════════════════════════════
+              // 🔥 NEW: Dynamic curated category banner sections
+              // (e.g. "Chocolate temptations await", "Stock up on
+              // Snacks", "Discover more Beverages" — one section per
+              // real category, generated automatically). Each section
+              // pulls up to 6 matching products and shows a compact
+              // 3-column grid with a "See all products" pill below.
+              // ══════════════════════════════════════════════════
+              Obx(() {
+                final categories = categoryController.categoryList;
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    for (int i = 0; i < categories.length; i++)
+                      _buildCategorySection(
+                        context,
+                        width,
+                        height,
+                        categoryId: categories[i].id.toString(),
+                        title:
+                            _sectionTitleTemplates[i %
+                                    _sectionTitleTemplates.length]
+                                .replaceAll('{category}', categories[i].name),
+                        subtitle:
+                            _sectionSubtitleTemplates[i %
+                                    _sectionSubtitleTemplates.length]
+                                .replaceAll('{category}', categories[i].name),
+                      ),
+                  ],
+                );
+              }),
 
               SizedBox(height: height * 0.05),
             ],
@@ -1087,5 +575,350 @@ class _HomePageState extends State<HomePage> {
     await searchControllerX.filterBySearch(value);
 
     searchResults.value = List.from(searchControllerX.productList);
+  }
+
+  // ── Shared section header (title + optional "View All") ──────────
+  // Used by Categories, New Arrival, Recommended, Top Picks, and the
+  // curated category sections so every section title / action link
+  // shares one consistent look across the page.
+  Widget _sectionHeader(
+    double width, {
+    required String title,
+    String? subtitle,
+    VoidCallback? onViewAll,
+  }) {
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: width * 0.05),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: width * 0.045,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.grey[900],
+                  ),
+                ),
+                if (subtitle != null) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      fontSize: width * 0.032,
+                      color: Colors.grey.shade500,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          if (onViewAll != null)
+            GestureDetector(
+              onTap: onViewAll,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'View All',
+                    style: TextStyle(
+                      fontSize: width * 0.035,
+                      color: Colors.green.shade700,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: Colors.green.shade700,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.arrow_forward,
+                      size: 12,
+                      color: Colors.white,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  // ── Curated category banner section builder ─────────────────────
+  Widget _buildCategorySection(
+    BuildContext context,
+    double width,
+    double height, {
+    required String categoryId,
+    required String title,
+    required String subtitle,
+  }) {
+    return Obx(() {
+      final products = productController.productList
+          .where((p) => p.categoryId.toString() == categoryId)
+          .toList();
+
+      if (products.isEmpty) {
+        // No products in this category yet — hide the section instead
+        // of showing an empty banner.
+        return const SizedBox.shrink();
+      }
+
+      final display = products.length > 6 ? products.sublist(0, 6) : products;
+
+      return Padding(
+        padding: EdgeInsets.only(bottom: height * 0.025),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // ── Header ──────────────────────────────────
+            _sectionHeader(
+              width,
+              title: title,
+              subtitle: subtitle,
+              onViewAll: () => Get.to(() => AllProductsPage()),
+            ),
+
+            SizedBox(height: height * 0.012),
+
+            // ── 3-column grid ─────────────────────────────
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: width * 0.04),
+              child: GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: display.length,
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 3,
+                  crossAxisSpacing: width * 0.025,
+                  mainAxisSpacing: height * 0.015,
+                  childAspectRatio: 0.6,
+                ),
+                itemBuilder: (context, index) => _PromoProductCard(
+                  product: display[index],
+                  wishlistController: wishlistController,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    });
+  }
+}
+
+// ── Compact product card used inside curated category sections ──────
+class _PromoProductCard extends StatelessWidget {
+  final dynamic product;
+  final WishlistController wishlistController;
+
+  const _PromoProductCard({
+    required this.product,
+    required this.wishlistController,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final double price = (product.price as num).toDouble();
+
+    // discounted_price may not exist on every product model — fall back
+    // safely to the regular price if it's missing.
+    double discountedPrice = price;
+    try {
+      final dynamic dp = (product as dynamic).discounted_price;
+      if (dp != null) discountedPrice = (dp as num).toDouble();
+    } catch (_) {
+      // field doesn't exist — keep discountedPrice == price
+    }
+
+    final bool hasDiscount = discountedPrice < price;
+    final int discountPct = hasDiscount
+        ? ((1 - discountedPrice / price) * 100).round()
+        : 0;
+
+    return GestureDetector(
+      onTap: () => Get.to(() => ProductDetailsPage(product: product)),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: Colors.grey.shade200),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // ── Image block ────────────────────────────────
+            AspectRatio(
+              aspectRatio: 1,
+              child: Stack(
+                children: [
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(10),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFF6F8F5),
+                      borderRadius: BorderRadius.vertical(
+                        top: Radius.circular(14),
+                      ),
+                    ),
+                    child: Image.network(
+                      product.image,
+                      fit: BoxFit.contain,
+                      errorBuilder: (_, _, _) => Icon(
+                        Icons.image_not_supported,
+                        color: Colors.grey[300],
+                      ),
+                    ),
+                  ),
+
+                  // Discount badge (top-left)
+                  if (hasDiscount)
+                    Positioned(
+                      top: 6,
+                      left: 6,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 5,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.red.shade500,
+                          borderRadius: BorderRadius.circular(5),
+                        ),
+                        child: Text(
+                          "-$discountPct%",
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 9,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                    ),
+
+                  // Wishlist heart (top-right)
+                  Positioned(
+                    top: 6,
+                    right: 6,
+                    child: Obx(
+                      () => GestureDetector(
+                        onTap: () => wishlistController.toggle(product),
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: const BoxDecoration(
+                            color: Colors.white,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            wishlistController.isWishlisted(product.id)
+                                ? Icons.favorite
+                                : Icons.favorite_border,
+                            size: 12,
+                            color: wishlistController.isWishlisted(product.id)
+                                ? const Color(0xFFE0386A)
+                                : Colors.grey,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  // ADD button (bottom-right, overlapping image)
+                  Positioned(
+                    bottom: 4,
+                    right: 4,
+                    child: GestureDetector(
+                      onTap: () {
+                        Get.to(() => ProductDetailsPage(product: product));
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(
+                            color: Colors.green.shade600,
+                            width: 1.2,
+                          ),
+                        ),
+                        child: Text(
+                          "VIEW",
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w800,
+                            color: Colors.green.shade700,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // ── Info block ──────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.fromLTRB(8, 6, 8, 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        '₹${discountedPrice.toStringAsFixed(0)}',
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w800,
+                          color: Colors.black87,
+                        ),
+                      ),
+                      if (hasDiscount) ...[
+                        const SizedBox(width: 4),
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 1.5),
+                          child: Text(
+                            '₹${price.toStringAsFixed(0)}',
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: Colors.grey.shade400,
+                              decoration: TextDecoration.lineThrough,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    product.name,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w600,
+                      height: 1.2,
+                      color: Colors.black87,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
