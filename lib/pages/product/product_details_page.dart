@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:instant_delivery/controllers/cart_controller.dart';
+import 'package:instant_delivery/controllers/category_controller.dart';
 import 'package:instant_delivery/controllers/product_controller.dart';
 import 'package:instant_delivery/controllers/wishlist_controller.dart';
 import 'package:instant_delivery/pages/cart/cart_page.dart';
 import 'package:instant_delivery/pages/cart/checkout_page.dart';
 import 'package:instant_delivery/pages/product/all_products.dart';
 import 'package:instant_delivery/services/api_service.dart';
+import 'package:instant_delivery/widgets/branding/branding.dart';
+import 'package:instant_delivery/widgets/cards/category_card.dart';
+import 'package:instant_delivery/widgets/cards/product_card.dart';
 import 'package:instant_delivery/widgets/navigation/custom_app_bar.dart';
 
 class ProductDetailsPage extends StatefulWidget {
@@ -25,7 +29,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
 
   late ProductController recommendedController;
   late ProductController newArrivalController;
-
+  final CategoryController categoryController = Get.put(CategoryController());
   RxInt quantity = 1.obs;
   Rx<dynamic> currentProduct = Rx(null);
   final ProductController controller = Get.find();
@@ -616,25 +620,88 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
 
               _buildReviewsSection(product.id),
 
-              SizedBox(height: height * 0.02),
-
               /// RECOMMENDED
+              SizedBox(height: height * 0.015),
               if (recommendedController.recommendedList.isNotEmpty) ...[
-                _buildHorizontalList(
-                  "Recommended for you",
-                  recommendedController.recommendedList,
-                  "rec",
+                SectionHeader(
+                  title: 'Recommended for you',
+                  onViewAll: () => Get.to(() => AllProductsPage()),
+                ),
+
+                SizedBox(height: height * 0.015),
+
+                // 🔥 Horizontal Product List (Different Design)
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: width * 0.04),
+                  child: Obx(() {
+                    if (recommendedController.isLoading.value) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+                    final recommended = recommendedController.recommendedList;
+                    final displayCount = recommended.length > 6
+                        ? 6
+                        : recommended.length;
+                    return GridView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: displayCount,
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 3,
+                        crossAxisSpacing: width * 0.025,
+                        mainAxisSpacing: height * 0.015,
+                        childAspectRatio: 0.6,
+                      ),
+                      itemBuilder: (context, index) => PromoProductCard(
+                        product: recommended[index],
+                        wishlistController: wishlistController,
+                      ),
+                    );
+                  }),
                 ),
               ],
 
-              SizedBox(height: height * 0.015),
-
               /// NEW ARRIVAL
-              _buildHorizontalList(
-                "New Arrival",
-                newArrivalController.newArrivalList,
-                "new",
-              ),
+              SizedBox(height: height * 0.015),
+              if (newArrivalController.newArrivalList.isNotEmpty) ...[
+                SectionHeader(
+                  title: 'New Arrival',
+                  onViewAll: () => Get.to(() => AllProductsPage()),
+                ),
+
+                SizedBox(height: height * 0.015),
+
+                // 🔥 Horizontal Product List (Different Design)
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: width * 0.04),
+                  child: Obx(() {
+                    if (newArrivalController.isLoading.value) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+                    final newArrivals = newArrivalController.newArrivalList;
+                    final displayCount = newArrivals.length > 6
+                        ? 6
+                        : newArrivals.length;
+                    return GridView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: displayCount,
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 3,
+                        crossAxisSpacing: width * 0.025,
+                        mainAxisSpacing: height * 0.015,
+                        childAspectRatio: 0.6,
+                      ),
+                      itemBuilder: (context, index) => PromoProductCard(
+                        product: newArrivals[index],
+                        wishlistController: wishlistController,
+                      ),
+                    );
+                  }),
+                ),
+                SizedBox(height: height * 0.02),
+              ],
+
+              AppFooterBranding(),
             ],
           ),
 
@@ -670,203 +737,6 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
           ),
         ],
       ),
-    );
-  }
-
-  // ── Horizontal product list ───────────────────────────────────
-  Widget _buildHorizontalList(String title, List list, String tag) {
-    final size = MediaQuery.of(context).size;
-    final width = size.width;
-    final height = size.height;
-
-    ProductController ctrl = tag == "rec"
-        ? recommendedController
-        : newArrivalController;
-
-    return Column(
-      children: [
-        Padding(
-          padding: EdgeInsets.symmetric(horizontal: width * 0.05),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                title,
-                style: TextStyle(
-                  fontSize: width * 0.045,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              TextButton(
-                onPressed: () => Get.to(() => AllProductsPage()),
-                child: const Text("View All"),
-              ),
-            ],
-          ),
-        ),
-        SizedBox(height: height * 0.015),
-        SizedBox(
-          height: height * 0.28,
-          child: Obx(() {
-            if (ctrl.isLoading.value) {
-              return const Center(child: CircularProgressIndicator());
-            }
-            if (list.isEmpty) {
-              return const Center(child: Text("No products found"));
-            }
-
-            return ListView.builder(
-              scrollDirection: Axis.horizontal,
-              itemCount: list.length,
-              itemBuilder: (context, index) {
-                final item = list[index];
-                return GestureDetector(
-                  onTap: () async {
-                    currentProduct.value = null;
-                    await controller.loadProductReviews(item.id);
-                    currentProduct.value = item;
-                    quantity.value = 1;
-                    _scrollController.animateTo(
-                      0,
-                      duration: const Duration(milliseconds: 400),
-                      curve: Curves.easeInOut,
-                    );
-                  },
-                  child: Container(
-                    width: width * 0.42,
-                    margin: EdgeInsets.only(
-                      left: width * 0.04,
-                      bottom: height * 0.01,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: const [
-                        BoxShadow(
-                          color: Colors.black12,
-                          blurRadius: 6,
-                          offset: Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: Stack(
-                      children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Expanded(
-                              child: Padding(
-                                padding: const EdgeInsets.all(10),
-                                child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(12),
-                                  child: Image.network(
-                                    item.image,
-                                    fit: BoxFit.contain,
-                                    width: double.infinity,
-                                  ),
-                                ),
-                              ),
-                            ),
-                            Padding(
-                              padding: EdgeInsets.symmetric(
-                                horizontal: width * 0.03,
-                                vertical: height * 0.005,
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    item.name,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(
-                                      fontSize: width * 0.035,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                  SizedBox(height: height * 0.004),
-                                  Text(
-                                    "₹${item.price}",
-                                    style: TextStyle(
-                                      color: Colors.green,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: width * 0.035,
-                                    ),
-                                  ),
-                                  SizedBox(height: height * 0.008),
-                                  SizedBox(
-                                    width: double.infinity,
-                                    child: Container(
-                                      padding: EdgeInsets.symmetric(
-                                        vertical: height * 0.007,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        gradient: LinearGradient(
-                                          colors: [
-                                            Colors.green,
-                                            Colors.green.shade700,
-                                          ],
-                                        ),
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                      child: const Center(
-                                        child: Text(
-                                          "View",
-                                          style: TextStyle(
-                                            color: Colors.white,
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                        Positioned(
-                          top: 4,
-                          right: 4,
-                          child: Obx(
-                            () => GestureDetector(
-                              onTap: () => wishlistController.toggle(item),
-                              child: Container(
-                                width: 28,
-                                height: 28,
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  shape: BoxShape.circle,
-                                  boxShadow: const [
-                                    BoxShadow(
-                                      color: Colors.black12,
-                                      blurRadius: 4,
-                                    ),
-                                  ],
-                                ),
-                                child: Icon(
-                                  wishlistController.isWishlisted(item.id)
-                                      ? Icons.favorite
-                                      : Icons.favorite_border,
-                                  size: 16,
-                                  color:
-                                      wishlistController.isWishlisted(item.id)
-                                      ? const Color(0xFFE0386A)
-                                      : Colors.grey,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              },
-            );
-          }),
-        ),
-      ],
     );
   }
 

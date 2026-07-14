@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:instant_delivery/controllers/orderDetails_controller.dart';
+import 'package:instant_delivery/widgets/branding/branding.dart';
 import 'package:instant_delivery/widgets/navigation/custom_app_bar.dart';
 import 'package:intl/intl.dart';
 
@@ -157,12 +158,11 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
 
               // ── DELIVERY ADDRESS ─────────────────────────────
               _buildAddressCard(address),
-
-              const SizedBox(height: 30),
             ],
           ),
         );
       }),
+      bottomNavigationBar: const AppFooterBranding(),
     );
   }
 

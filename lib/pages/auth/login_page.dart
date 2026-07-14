@@ -56,7 +56,7 @@ class _LoginPageState extends State<LoginPage> {
                         Image.asset(
                           'assets/images/logo_transperent.png',
                           width: screenWidth * 1,
-                          // height: screenHeight * 0.99,
+                          height: screenHeight * 0.25,
                           fit: BoxFit.contain,
                         ),
                         // SizedBox(height: screenHeight * 0.10),

@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:instant_delivery/config/app_config.dart';
 import 'package:instant_delivery/pages/cart/cart_page.dart';
-import '../controllers/bundle_controller.dart';
-import '../models/bundle_model.dart';
+import '../../controllers/bundle_controller.dart';
+import '../../models/bundle_model.dart';
 
 const String _kApiBaseUrl = AppConfig.baseUrl;
 
