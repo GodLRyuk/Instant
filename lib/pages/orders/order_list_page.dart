@@ -15,6 +15,8 @@ class OrderPage extends StatelessWidget {
         return Colors.greenAccent;
       case "COMPLETED":
         return Colors.green;
+      case "PACKED":
+        return Colors.green;
       case "SHIPPED":
         return Colors.yellow;
       case "PENDING":

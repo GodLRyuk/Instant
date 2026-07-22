@@ -5,6 +5,7 @@ import 'package:instant_delivery/controllers/coupon_controller.dart';
 import 'package:instant_delivery/controllers/pass_controller.dart';
 import 'package:instant_delivery/pages/cart/payment_page.dart';
 import 'package:instant_delivery/pages/membership/pass_purchase_screen.dart';
+import 'package:instant_delivery/services/api_service.dart';
 import 'package:instant_delivery/services/location_service.dart'
     as LocationService;
 import 'package:instant_delivery/utils/delivery_charge.dart';
@@ -47,6 +48,9 @@ class _CheckoutPageState extends State<CheckoutPage> {
   // navigation to PaymentPage) is currently in progress, so we can show a
   // spinner and block duplicate taps.
   final RxBool isConfirmingOrder = false.obs;
+  final RxDouble estimatedDeliveryFee = 0.0.obs;
+  final RxBool isFeeLoading = false.obs;
+  final RxString feeError = ''.obs;
 
   final TextEditingController _couponCtrl = TextEditingController();
   final bool _isApplyingCoupon = false;
@@ -78,9 +82,10 @@ class _CheckoutPageState extends State<CheckoutPage> {
     final minOrder = passController.freeDeliveryMinOrder.value;
 
     if (passController.hasPass.value && subtotal >= minOrder) {
-      return 0.0; // ✅ free with pass
+      return 0.0; // free with pass — unchanged
     }
-    return DeliveryCharge.calculate(subtotal);
+    return estimatedDeliveryFee
+        .value; // ✅ was: DeliveryCharge.calculate(subtotal)
   }
 
   double get finalAmount =>
@@ -93,7 +98,62 @@ class _CheckoutPageState extends State<CheckoutPage> {
   @override
   void initState() {
     super.initState();
-    addressController.fetchAddresses();
+    addressController.fetchAddresses().then((_) {
+      // Once addresses load, if one is already selected, fetch the fee for it
+      if (addressController.selectedAddress.value != null) {
+        _fetchDeliveryFee();
+      }
+    });
+
+    // ✅ NEW — refetch fee whenever the selected address changes
+    ever(addressController.selectedAddress, (_) {
+      _fetchDeliveryFee();
+    });
+  }
+
+  Future<void> _fetchDeliveryFee() async {
+    final address = addressController.selectedAddress.value;
+    if (address == null) return;
+
+    isFeeLoading.value = true;
+    feeError.value = '';
+
+    try {
+      final apiItems = widget.items
+          .map(
+            (item) => {
+              "product": item["product"],
+              "quantity": item["quantity"],
+            },
+          )
+          .toList();
+
+      final res = await ApiService().validateOrder(
+        items: apiItems,
+        addressId: address.id,
+        currentLat: null,
+        currentLng: null,
+      );
+
+      if (res["statusCode"] == 200) {
+        final data = res["data"];
+        estimatedDeliveryFee.value = (data["delivery_fee"] as num).toDouble();
+      } else {
+        final data = res["data"];
+        String msg = "Could not calculate delivery fee for this address.";
+        if (data is Map) {
+          final val = data.values.first;
+          msg = val is List ? val.first.toString() : val.toString();
+        }
+        feeError.value = msg;
+        estimatedDeliveryFee.value = 0.0;
+      }
+    } catch (e) {
+      feeError.value = "Failed to check delivery availability.";
+      estimatedDeliveryFee.value = 0.0;
+    } finally {
+      isFeeLoading.value = false;
+    }
   }
 
   @override
@@ -396,39 +456,72 @@ class _CheckoutPageState extends State<CheckoutPage> {
                           ],
 
                           // Delivery charge row
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              const Text("Delivery Charge"),
-                              Row(
-                                children: [
-                                  if (passController.hasPass.value &&
-                                      deliveryCharge == 0) ...[
-                                    Text(
-                                      "₹${DeliveryCharge.calculate(widget.totalAmount - _activeDiscount).toStringAsFixed(0)}",
-                                      style: const TextStyle(
-                                        color: Colors.grey,
-                                        fontSize: 12,
-                                        decoration: TextDecoration.lineThrough,
+                          Obx(() {
+                            if (isFeeLoading.value) {
+                              return const Padding(
+                                padding: EdgeInsets.symmetric(vertical: 4),
+                                child: Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text("Delivery Charge"),
+                                    SizedBox(
+                                      width: 16,
+                                      height: 16,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
                                       ),
                                     ),
-                                    const SizedBox(width: 6),
                                   ],
-                                  Text(
-                                    deliveryCharge == 0
-                                        ? "FREE"
-                                        : "₹${deliveryCharge.toStringAsFixed(2)}",
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      color: deliveryCharge == 0
-                                          ? Colors.green
-                                          : Colors.black,
+                                ),
+                              );
+                            }
+
+                            if (feeError.value.isNotEmpty) {
+                              return Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 4,
+                                ),
+                                child: Row(
+                                  children: [
+                                    const Icon(
+                                      Icons.error_outline,
+                                      color: Colors.red,
+                                      size: 16,
                                     ),
+                                    const SizedBox(width: 6),
+                                    Expanded(
+                                      child: Text(
+                                        feeError.value,
+                                        style: const TextStyle(
+                                          color: Colors.red,
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }
+
+                            return Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                const Text("Delivery Charge"),
+                                Text(
+                                  deliveryCharge == 0
+                                      ? "FREE"
+                                      : "₹${deliveryCharge.toStringAsFixed(2)}",
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: deliveryCharge == 0
+                                        ? Colors.green
+                                        : Colors.black,
                                   ),
-                                ],
-                              ),
-                            ],
-                          ),
+                                ),
+                              ],
+                            );
+                          }),
 
                           // Pass free delivery badge
                           if (passController.hasPass.value &&
@@ -549,6 +642,14 @@ class _CheckoutPageState extends State<CheckoutPage> {
                             if (addressController.selectedAddress.value ==
                                 null) {
                               Get.snackbar("Error", "Please select an address");
+                              return;
+                            }
+                            if (feeError.value.isNotEmpty) {
+                              // ✅ NEW
+                              Get.snackbar(
+                                "Delivery Unavailable",
+                                feeError.value,
+                              );
                               return;
                             }
 

@@ -4,6 +4,7 @@ import 'package:instant_delivery/controllers/category_controller.dart';
 import 'package:instant_delivery/controllers/product_controller.dart';
 import 'package:instant_delivery/models/product_model.dart';
 import 'package:instant_delivery/pages/product/product_details_page.dart';
+import 'package:instant_delivery/widgets/branding/branding.dart';
 import 'package:instant_delivery/widgets/navigation/custom_app_bar.dart';
 
 // ── Design tokens ─────────────────────────────────────────────────
@@ -122,12 +123,12 @@ class _AllProductsPageState extends State<AllProductsPage> {
             ),
 
             // ── Shop by brands ───────────────────────────────────
-            SliverToBoxAdapter(child: _buildBrandsSection()),
-
+            // SliverToBoxAdapter(child: _buildBrandsSection()),
             const SliverToBoxAdapter(child: SizedBox(height: 24)),
           ],
         );
       }),
+      bottomNavigationBar: const AppFooterBranding(),
     );
   }
 
@@ -272,44 +273,6 @@ class _AllProductsPageState extends State<AllProductsPage> {
             ),
           ),
           const SizedBox(height: 14),
-          SizedBox(
-            height: 96,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: _brands.length,
-              separatorBuilder: (_, _) => const SizedBox(width: 14),
-              itemBuilder: (context, index) {
-                final brand = _brands[index];
-                return Column(
-                  children: [
-                    Container(
-                      width: 68,
-                      height: 68,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: _kBorder),
-                      ),
-                      alignment: Alignment.center,
-                      child: Text(
-                        brand['name']!.substring(0, 1),
-                        style: const TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w800,
-                          color: _kTextPrimary,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      brand['name']!,
-                      style: const TextStyle(fontSize: 12, color: _kTextMuted),
-                    ),
-                  ],
-                );
-              },
-            ),
-          ),
         ],
       ),
     );

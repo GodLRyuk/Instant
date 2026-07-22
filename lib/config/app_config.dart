@@ -1,7 +1,7 @@
 class AppConfig {
   // Base URL of your API
-  static const String baseUrl = 'http://192.168.1.37:8000/api';
-  static const String wsUrl = 'ws://192.168.1.37:8000'; // ✅ add this
+  static const String baseUrl = 'http://192.168.1.7:8000/api';
+  static const String wsUrl = 'ws://192.168.1.7:8000'; // ✅ add this
 
   // static const String baseUrl =
   //     'https://web-production-a78c03.up.railway.app/api';
