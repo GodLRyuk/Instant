@@ -146,6 +146,12 @@ class _HomePageState extends State<HomePage> {
     final size = MediaQuery.of(context).size;
     final width = size.width;
     final height = size.height;
+    final gridCrossAxisCount = width < 360 ? 2 : 3;
+    final gridChildAspectRatio = width < 360
+        ? 0.50
+        : width < 600
+        ? 0.56
+        : 0.58;
 
     return Scaffold(
       backgroundColor: Colors.grey[100],
@@ -162,18 +168,17 @@ class _HomePageState extends State<HomePage> {
                   Container(
                     margin: EdgeInsets.symmetric(horizontal: width * 0.04),
                     padding: EdgeInsets.symmetric(horizontal: width * 0.04),
-                    height: height * 0.06,
+                    // height: height * 0.06,
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(15),
                     ),
                     child: Row(
                       children: [
-                        SizedBox(width: width * 0.03),
-
+                        // SizedBox(width: width * 0.03),
                         Expanded(
                           child: Padding(
-                            padding: const EdgeInsets.only(top: 8.0),
+                            padding: const EdgeInsets.only(top: 5.0),
                             child: TextField(
                               controller: searchController,
                               textInputAction: TextInputAction.search,
@@ -225,8 +230,7 @@ class _HomePageState extends State<HomePage> {
               SizedBox(height: height * 0.01),
 
               // 🔥 Categories Title
-              SectionHeader(title: 'Categories'),
-
+              // SectionHeader(title: 'Categories'),
               SizedBox(height: height * 0.005),
               // ✅ GETX CATEGORY LIST
               SizedBox(
@@ -259,7 +263,7 @@ class _HomePageState extends State<HomePage> {
                         },
                         child: Container(
                           width: width * 0.2,
-                          margin: EdgeInsets.only(left: width * 0.04),
+                          margin: EdgeInsets.only(left: width * 0.02),
                           child: Column(
                             children: [
                               CircleAvatar(
@@ -361,10 +365,10 @@ class _HomePageState extends State<HomePage> {
                     physics: const NeverScrollableScrollPhysics(),
                     itemCount: displayCount,
                     gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 3,
+                      crossAxisCount: gridCrossAxisCount,
                       crossAxisSpacing: width * 0.025,
                       mainAxisSpacing: height * 0.015,
-                      childAspectRatio: 0.56,
+                      childAspectRatio: gridChildAspectRatio,
                     ),
                     itemBuilder: (context, index) => MediaQuery(
                       data: MediaQuery.of(context).copyWith(
@@ -409,10 +413,10 @@ class _HomePageState extends State<HomePage> {
                       physics: const NeverScrollableScrollPhysics(),
                       itemCount: displayCount,
                       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 3,
+                        crossAxisCount: gridCrossAxisCount,
                         crossAxisSpacing: width * 0.025,
                         mainAxisSpacing: height * 0.015,
-                        childAspectRatio: 0.58,
+                        childAspectRatio: gridChildAspectRatio,
                       ),
                       itemBuilder: (context, index) => PromoProductCard(
                         product: recommended[index],
@@ -512,10 +516,10 @@ class _HomePageState extends State<HomePage> {
                         physics: const NeverScrollableScrollPhysics(),
                         itemCount: displayCount,
                         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 3,
+                          crossAxisCount: gridCrossAxisCount,
                           crossAxisSpacing: width * 0.025,
                           mainAxisSpacing: height * 0.015,
-                          childAspectRatio: 0.58,
+                          childAspectRatio: gridChildAspectRatio,
                         ),
                         itemBuilder: (context, index) => PromoProductCard(
                           product: products[index],

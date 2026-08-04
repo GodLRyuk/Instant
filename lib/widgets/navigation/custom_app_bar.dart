@@ -23,6 +23,9 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   @override
   Widget build(BuildContext context) {
     final width = MediaQuery.of(context).size.width;
+    final logoWidth = width * 0.26;
+    final logoHeight = width < 360 ? 30.0 : 35.0;
+    final avatarSize = width < 360 ? 34.0 : 40.0;
 
     return AppBar(
       elevation: 0,
@@ -32,8 +35,8 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
       title: Image.asset(
         'assets/images/logo_transperent.png',
         fit: BoxFit.cover,
-        width: width * 0.26,
-        height: 35,
+        width: logoWidth,
+        height: logoHeight,
       ),
 
       // ✅ CONDITIONAL LEADING
@@ -65,12 +68,14 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
                             ? Image.network(
                                 imageUrl,
                                 fit: BoxFit.cover,
-                                width: 40,
-                                height: 40,
+                                width: avatarSize,
+                                height: avatarSize,
                                 errorBuilder: (context, error, stackTrace) {
                                   return Image.asset(
                                     'assets/images/profileImg.jpg',
                                     fit: BoxFit.cover,
+                                    width: avatarSize,
+                                    height: avatarSize,
                                   );
                                 },
                               )

@@ -1,25 +1,31 @@
 {
-    // Use IntelliSense to learn about possible attributes.
-    // Hover to view descriptions of existing attributes.
-    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
         {
             "name": "instant_delivery",
             "request": "launch",
-            "type": "dart"
+            "type": "dart",
+            "args": [
+                "--dart-define", "RAZORPAY_KEY=rzp_test_StsVgck8iNAA8a"
+            ]
         },
         {
             "name": "instant_delivery (profile mode)",
             "request": "launch",
             "type": "dart",
-            "flutterMode": "profile"
+            "flutterMode": "profile",
+            "args": [
+                "--dart-define", "RAZORPAY_KEY=rzp_test_StsVgck8iNAA8a"
+            ]
         },
         {
             "name": "instant_delivery (release mode)",
             "request": "launch",
             "type": "dart",
-            "flutterMode": "release"
+            "flutterMode": "release",
+            "args": [
+                "--dart-define", "RAZORPAY_KEY=rzp_live_your_actual_key"
+            ]
         }
     ]
 }

@@ -8,6 +8,8 @@ import 'package:instant_delivery/services/api_service.dart';
 import 'package:instant_delivery/services/secure_storage.dart';
 import 'package:instant_delivery/widgets/navigation/bottom_navigation.dart';
 
+import 'package:shared_preferences/shared_preferences.dart';
+
 class AuthController extends GetxController {
   var isLoading = false.obs;
   var isLoggedIn = false.obs;
@@ -38,10 +40,20 @@ class AuthController extends GetxController {
     Get.offAll(() => MainNavigation(initialIndex: 2));
   }
 
-  /// Resets the in-memory session only. Saved biometric credentials in
-  /// SecureStorage are intentionally left alone so the fingerprint
-  /// button on LoginPage keeps working for quick re-login.
-  void logout() {
+  /// Resets the in-memory session and clears secure tokens and user data.
+  Future<void> logout() async {
+    await _secureStorage.delete('access_token');
+    await _secureStorage.delete('refresh_token');
+    
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('access_token'); // Just in case it was there
+    await prefs.remove('refresh_token');
+    await prefs.remove('user_id');
+    await prefs.remove('email');
+    await prefs.remove('phone');
+    await prefs.remove('role');
+    await prefs.remove('profile_image');
+
     isLoggedIn.value = false;
     Get.offAllNamed(AppRoutes.loginPage);
   }

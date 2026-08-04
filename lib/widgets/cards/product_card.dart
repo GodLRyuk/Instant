@@ -19,6 +19,7 @@ class PromoProductCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
     final double price = (product.price as num).toDouble();
 
     double discountedPrice = price;
@@ -55,7 +56,7 @@ class PromoProductCard extends StatelessWidget {
                 children: [
                   Container(
                     width: double.infinity,
-                    padding: const EdgeInsets.all(10),
+                    padding: EdgeInsets.all(screenWidth * 0.025),
                     decoration: const BoxDecoration(
                       color: Color(0xFFF6F8F5),
                       borderRadius: BorderRadius.vertical(
@@ -76,9 +77,9 @@ class PromoProductCard extends StatelessWidget {
                       top: 6,
                       left: 6,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 5,
-                          vertical: 2,
+                        padding: EdgeInsets.symmetric(
+                          horizontal: screenWidth * 0.012,
+                          vertical: screenWidth * 0.006,
                         ),
                         decoration: BoxDecoration(
                           color: Colors.red.shade500,
@@ -86,9 +87,9 @@ class PromoProductCard extends StatelessWidget {
                         ),
                         child: Text(
                           "-$discountPct%",
-                          style: const TextStyle(
+                          style: TextStyle(
                             color: Colors.white,
-                            fontSize: 9,
+                            fontSize: screenWidth < 360 ? 8 : 9,
                             fontWeight: FontWeight.w800,
                           ),
                         ),
@@ -101,7 +102,7 @@ class PromoProductCard extends StatelessWidget {
                       () => GestureDetector(
                         onTap: () => wishlistController.toggle(product),
                         child: Container(
-                          padding: const EdgeInsets.all(4),
+                          padding: EdgeInsets.all(screenWidth * 0.01),
                           decoration: const BoxDecoration(
                             color: Colors.white,
                             shape: BoxShape.circle,
@@ -110,7 +111,7 @@ class PromoProductCard extends StatelessWidget {
                             wishlistController.isWishlisted(product.id)
                                 ? Icons.favorite
                                 : Icons.favorite_border,
-                            size: 12,
+                            size: screenWidth < 360 ? 11 : 12,
                             color: wishlistController.isWishlisted(product.id)
                                 ? const Color(0xFFE0386A)
                                 : Colors.grey,
@@ -122,79 +123,97 @@ class PromoProductCard extends StatelessWidget {
                 ],
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(8, 6, 8, 8),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // VIEW button on top of price
-                  GestureDetector(
-                    onTap: () => Get.to(
-                      () => ProductDetailsPage(product: product),
-                      preventDuplicates: false,
-                      transition: Transition.fadeIn,
-                      duration: const Duration(milliseconds: 700),
-                      curve: Curves.easeInOut,
-                    ),
-                    child: Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(vertical: 6),
-                      decoration: BoxDecoration(
-                        color: Colors.green.shade600,
-                        borderRadius: BorderRadius.circular(8),
+            ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 0),
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(
+                  screenWidth * 0.022,
+                  screenWidth * 0.012,
+                  screenWidth * 0.022,
+                  screenWidth * 0.018,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    GestureDetector(
+                      onTap: () => Get.to(
+                        () => ProductDetailsPage(product: product),
+                        preventDuplicates: false,
+                        transition: Transition.fadeIn,
+                        duration: const Duration(milliseconds: 700),
+                        curve: Curves.easeInOut,
                       ),
-                      child: const Text(
-                        "VIEW",
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w800,
-                          color: Colors.white,
+                      child: Container(
+                        width: double.infinity,
+                        padding: EdgeInsets.symmetric(
+                          vertical: screenWidth < 360 ? 2 : 3,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.green.shade600,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: const Text(
+                          "VIEW",
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w800,
+                            color: Colors.white,
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 6),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Text(
-                        '₹${discountedPrice.toStringAsFixed(0)}',
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w800,
-                          color: Colors.black87,
-                        ),
-                      ),
-                      if (hasDiscount) ...[
-                        const SizedBox(width: 4),
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 1.5),
+                    SizedBox(height: screenWidth < 360 ? 1 : 2),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Flexible(
                           child: Text(
-                            '₹${price.toStringAsFixed(0)}',
+                            '₹${discountedPrice.toStringAsFixed(0)}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                             style: TextStyle(
-                              fontSize: 13,
-                              color: Colors.red.shade400,
-                              decoration: TextDecoration.lineThrough,
+                              fontSize: screenWidth < 360 ? 10 : 11,
+                              fontWeight: FontWeight.w800,
+                              color: Colors.black87,
                             ),
                           ),
                         ),
+                        if (hasDiscount) ...[
+                          SizedBox(width: screenWidth < 360 ? 1 : 2),
+                          Flexible(
+                            child: Padding(
+                              padding: EdgeInsets.only(bottom: 0.5),
+                              child: Text(
+                                '₹${price.toStringAsFixed(0)}',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: screenWidth < 360 ? 8.5 : 9.5,
+                                  color: Colors.red.shade400,
+                                  decoration: TextDecoration.lineThrough,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ],
-                    ],
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    product.name,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 11.5,
-                      fontWeight: FontWeight.w600,
-                      height: 1.2,
-                      color: Colors.black87,
                     ),
-                  ),
-                ],
+                    SizedBox(height: 1),
+                    Text(
+                      product.name,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: screenWidth < 360 ? 8.5 : 9.5,
+                        fontWeight: FontWeight.w600,
+                        height: 1.05,
+                        color: Colors.black87,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ],

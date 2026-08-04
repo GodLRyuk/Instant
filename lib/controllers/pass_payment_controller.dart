@@ -1,4 +1,5 @@
 import 'package:get/get.dart';
+import 'package:instant_delivery/config/app_config.dart';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:instant_delivery/services/api_service.dart';
@@ -39,7 +40,7 @@ class PassPaymentController extends GetxController {
 
       // Open Razorpay
       final options = {
-        'key': 'rzp_test_StsVgck8iNAA8a',
+        'key': AppConfig.razorpayKey,
         'amount': (amount * 100).toInt(),
         'name': 'Instant Delivery',
         'description':

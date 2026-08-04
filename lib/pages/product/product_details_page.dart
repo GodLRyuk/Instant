@@ -387,35 +387,6 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                   ],
                 ),
               ),
-
-              SizedBox(height: height * 0.015),
-
-              /// DESCRIPTION
-              Container(
-                width: double.infinity,
-                margin: EdgeInsets.symmetric(horizontal: width * 0.04),
-                padding: EdgeInsets.all(width * 0.04),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(15),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Text(
-                      "Description",
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      product.description ?? "No description available",
-                      style: TextStyle(color: Colors.grey[700]),
-                    ),
-                  ],
-                ),
-              ),
-
               SizedBox(height: height * 0.015),
 
               /// QUANTITY
@@ -614,6 +585,33 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                           ),
                         );
                       }),
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(height: height * 0.015),
+
+              /// DESCRIPTION
+              Container(
+                width: double.infinity,
+                margin: EdgeInsets.symmetric(horizontal: width * 0.04),
+                padding: EdgeInsets.all(width * 0.04),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(15),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text(
+                      "Description",
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      product.description ?? "No description available",
+                      style: TextStyle(color: Colors.grey[700]),
                     ),
                   ],
                 ),

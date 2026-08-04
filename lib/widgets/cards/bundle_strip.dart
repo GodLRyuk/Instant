@@ -5,7 +5,7 @@ import 'package:instant_delivery/pages/cart/cart_page.dart';
 import '../../controllers/bundle_controller.dart';
 import '../../models/bundle_model.dart';
 
-const String _kApiBaseUrl = AppConfig.baseUrl;
+final String _kApiBaseUrl = AppConfig.baseUrl;
 
 String _resolveImageUrl(String rawUrl) {
   if (rawUrl.isEmpty) return rawUrl;

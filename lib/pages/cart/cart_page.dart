@@ -226,7 +226,7 @@ class _CartPageState extends State<CartPage> {
 
             // ── COUPON ─────────────────────────────────────────
             _buildCouponSection(),
-
+            SizedBox(height: 10),
             // ── PASS BANNER ────────────────────────────────────
             _buildPassBanner(),
 

@@ -68,9 +68,8 @@ class _FlashSaleStripState extends State<FlashSaleStrip> {
     final width = MediaQuery.of(context).size.width;
     final height = MediaQuery.of(context).size.height;
 
-    final double cardWidth = width * 0.28;
-    const double infoBlockHeight =
-        96; // VIEW button row + price row + spacing + 2-line name + padding
+    final double cardWidth = width * (width < 360 ? 0.34 : 0.28);
+    final double infoBlockHeight = cardWidth + (width < 360 ? 70 : 90);
     final double stripHeight = cardWidth + infoBlockHeight;
 
     return Obx(() {
@@ -105,7 +104,7 @@ class _FlashSaleStripState extends State<FlashSaleStrip> {
                     Text(
                       widget.controller.flashSaleTitle.value,
                       style: TextStyle(
-                        fontSize: width * 0.045,
+                        fontSize: width < 360 ? 15 : width * 0.045,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -168,7 +167,7 @@ class _FlashSaleStripState extends State<FlashSaleStrip> {
                     onTap: () =>
                         Get.to(() => ProductDetailsPage(product: product)),
                     child: Container(
-                      width: width * 0.28,
+                      width: cardWidth,
                       margin: EdgeInsets.only(
                         left: width * 0.04,
                         right:

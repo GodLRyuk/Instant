@@ -1,5 +1,6 @@
 import 'package:get/get.dart';
 import 'package:instant_delivery/services/api_service.dart';
+import 'package:instant_delivery/services/log_service.dart';
 import '../models/address_model.dart';
 
 class AddressController extends GetxController {
@@ -25,13 +26,13 @@ class AddressController extends GetxController {
           orElse: () => data.first,
         );
       }
-
     } catch (e) {
-      print("Address error: $e");
+      LogService.e("Address fetch error", error: e);
     } finally {
       isLoading.value = false;
     }
   }
+
   Future<void> addNewAddress({
     required String fullAddress,
     required String city,
@@ -53,7 +54,7 @@ class AddressController extends GetxController {
   }
 
   /// 🔥 SELECT ADDRESS
-void selectAddress(AddressModel address) {
-  selectedAddress.value = address;
-}
+  void selectAddress(AddressModel address) {
+    selectedAddress.value = address;
+  }
 }

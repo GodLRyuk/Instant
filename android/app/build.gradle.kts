@@ -21,12 +21,25 @@ android {
     }
 
     defaultConfig {
-        
         applicationId = "com.example.instant_delivery"
         minSdk = 29
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+    }
+
+    flavorDimensions += "environment"
+
+    productFlavors {
+        create("dev") {
+            dimension = "environment"
+            versionNameSuffix = "-dev"
+            resValue("string", "app_name", "Instant Dev")
+        }
+        create("prod") {
+            dimension = "environment"
+            resValue("string", "app_name", "Instant")
+        }
     }
 
     buildTypes {

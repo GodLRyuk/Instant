@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:instant_delivery/controllers/address_controller.dart';
+import 'package:instant_delivery/controllers/auth_controller.dart';
 import 'package:instant_delivery/controllers/order_controller.dart';
 import 'package:instant_delivery/controllers/pass_controller.dart';
 import 'package:instant_delivery/controllers/profile_controller.dart';
@@ -351,12 +352,12 @@ class _ProfilePageState extends State<ProfilePage> {
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: () {
-                    Get.toNamed(AppRoutes.loginPage);
+                    Get.find<AuthController>().logout();
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Color(0xFF53D288),
+                    backgroundColor: const Color(0xFF53D288),
                   ),
-                  child: Text("Logout", style: TextStyle(color: Colors.white)),
+                  child: const Text("Logout", style: TextStyle(color: Colors.white)),
                 ),
               ),
             ),

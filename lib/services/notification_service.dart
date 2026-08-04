@@ -3,6 +3,7 @@ import 'package:awesome_notifications_fcm/awesome_notifications_fcm.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:instant_delivery/services/api_service.dart';
+import 'package:instant_delivery/services/log_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class NotificationService {
@@ -66,18 +67,18 @@ class NotificationService {
     try {
       await ApiService().saveDeviceToken(token);
     } catch (e) {
-      print('Could not save token to backend: $e');
+      LogService.e('Could not save token to backend', error: e);
     }
   }
 
   @pragma('vm:entry-point')
   static Future<void> onNativeTokenHandle(String token) async {
-    print('Native Token: $token');
+    LogService.d('Native Token: $token');
   }
 
   @pragma('vm:entry-point')
   static Future<void> onFcmSilentDataHandle(FcmSilentData silentData) async {
-    print('Silent data: ${silentData.data}');
+    LogService.d('Silent data: ${silentData.data}');
   }
 
   static Future<String?> getDeviceToken() async {

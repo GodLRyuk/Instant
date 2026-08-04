@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:instant_delivery/config/app_config.dart';
 import 'package:instant_delivery/widgets/navigation/bottom_navigation.dart';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -103,7 +104,7 @@ class PaymentController extends GetxController {
 
       // STEP 3: Open Razorpay — only if validation passed
       var options = {
-        'key': 'rzp_test_StsVgck8iNAA8a',
+        'key': AppConfig.razorpayKey,
         'amount': (totalAmount * 100).toInt(),
         'name': 'Instant Delivery',
         'description': 'Order Payment',

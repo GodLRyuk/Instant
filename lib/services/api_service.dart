@@ -8,22 +8,31 @@ import 'package:instant_delivery/models/category_model.dart';
 import 'package:instant_delivery/models/registration_model.dart';
 import 'package:instant_delivery/models/user_model.dart';
 import 'package:instant_delivery/services/interceptor.dart';
+import 'package:instant_delivery/services/log_service.dart';
+import 'package:instant_delivery/services/secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
-  final Dio _dio = Dio(
-    BaseOptions(
-      baseUrl: AppConfig.baseUrl,
-      validateStatus: (status) {
-        return true; // ✅ allow ALL responses (200, 400, 500, etc.)
-      },
-    ),
-  );
+  final SecureStorage _secureStorage = SecureStorage();
+  late final Dio _dio;
+
+  // Single constructor to ensure interceptors are added correctly
+  ApiService() {
+    _dio = Dio(
+      BaseOptions(
+        baseUrl: AppConfig.baseUrl,
+        validateStatus: (status) {
+          return status != null && status >= 200 && status < 300;
+        },
+      ),
+    );
+    _dio.interceptors.add(AuthInterceptor());
+  }
 
   Future<Map<String, dynamic>> login(String email, String password) async {
     try {
       final response = await _dio.post(
-        '/accounts/customer-login/', // Try without trailing slash first
+        '/accounts/customer-login/',
         data: LoginModel(email: email, password: password).toJson(),
         options: Options(headers: {'Content-Type': 'application/json'}),
       );
@@ -32,9 +41,9 @@ class ApiService {
 
         final prefs = await SharedPreferences.getInstance();
 
-        // ✅ Store tokens
-        await prefs.setString('access_token', data['access'] ?? '');
-        await prefs.setString('refresh_token', data['refresh'] ?? '');
+        // ✅ Store tokens securely
+        await _secureStorage.write('access_token', data['access'] ?? '');
+        await _secureStorage.write('refresh_token', data['refresh'] ?? '');
 
         // ✅ User info
         await prefs.setInt('user_id', data['user_id'] ?? 0);
@@ -53,8 +62,8 @@ class ApiService {
         return {'data': response.data};
       }
     } on DioException catch (e) {
+      LogService.e('Login error', error: e);
       if (e.response != null) {
-        // Safely get error message
         if (e.response!.data is Map<String, dynamic>) {
           return {'error': e.response!.data['message'] ?? 'Unknown error'};
         } else {
@@ -64,7 +73,7 @@ class ApiService {
         return {'error': e.message};
       }
     } catch (e) {
-      print('Other error: $e');
+      LogService.e('Unexpected login error', error: e);
       return {'error': 'Unexpected error: $e'};
     }
   }
@@ -114,7 +123,6 @@ class ApiService {
   }) async {
     final Map<String, dynamic> data = {"type": type, "otp": otp};
 
-    // ✅ Only send email if it is required
     if (type == "register" && email != null) {
       data["email"] = email;
     }
@@ -164,7 +172,6 @@ class ApiService {
 
       if (response.statusCode == 200) {
         List data = response.data;
-
         return data.map((e) => CategoryModel.fromJson(e)).toList();
       } else {
         throw Exception("Failed to load categories");
@@ -182,10 +189,6 @@ class ApiService {
     } else {
       throw Exception("Failed to load products");
     }
-  }
-
-  ApiService() {
-    _dio.interceptors.add(AuthInterceptor()); // ✅ Add here
   }
 
   // ================= NEW ARRIVALS =================
@@ -246,11 +249,8 @@ class ApiService {
 
       return response;
     } on DioException catch (e) {
-      // Access the response safely
-      final errorMessage = e;
-      print("Error: $errorMessage");
-
-      throw Exception(errorMessage);
+      LogService.e("Add to cart error", error: e);
+      throw Exception(e);
     }
   }
 
@@ -269,10 +269,7 @@ class ApiService {
       data: {"product_id": productId},
     );
 
-    print("RES: ${response.data}");
-
     if (response.statusCode == 200 && response.data['success'] == true) {
-      // ✅ Success case
       return;
     } else {
       throw Exception(response.data['message'] ?? "Failed to delete item");
@@ -321,7 +318,7 @@ class ApiService {
         throw Exception("Failed to add address");
       }
     } catch (e) {
-      print("API Add Address Error: $e");
+      LogService.e("Add Address Error", error: e);
       rethrow;
     }
   }
@@ -331,7 +328,7 @@ class ApiService {
       final response = await _dio.get("/accounts/profile/");
       return response;
     } catch (e) {
-      print("API Profile Error: $e");
+      LogService.e("Profile Error", error: e);
       rethrow;
     }
   }
@@ -355,10 +352,10 @@ class ApiService {
     String? couponCode,
     String? currentLat,
     String? currentLng,
-    String deliveryType = 'ASAP', // 👈 add
-    String? scheduledDate, // 👈 add
-    String? scheduledSlotStart, // 👈 add
-    String? scheduledSlotEnd, // 👈 add
+    String deliveryType = 'ASAP',
+    String? scheduledDate,
+    String? scheduledSlotStart,
+    String? scheduledSlotEnd,
   }) async {
     final response = await _dio.post(
       "/orders/create/",
@@ -368,14 +365,14 @@ class ApiService {
         "total_amount": totalAmount,
         "payment_method": paymentMethod,
         "payment_status": paymentStatus,
-        "delivery_type": deliveryType, // 👈 add
+        "delivery_type": deliveryType,
         if (couponCode != null && couponCode.isNotEmpty)
           "coupon_code": couponCode,
         if (currentLat != null) "current_lat": double.tryParse(currentLat),
         if (currentLng != null) "current_lng": double.tryParse(currentLng),
-        "scheduled_date": ?scheduledDate, // 👈 add
-        "scheduled_slot_start": ?scheduledSlotStart, // 👈 add
-        "scheduled_slot_end": ?scheduledSlotEnd, // 👈 add
+        "scheduled_date": scheduledDate,
+        "scheduled_slot_start": scheduledSlotStart,
+        "scheduled_slot_end": scheduledSlotEnd,
       },
     );
     return {"data": response.data, "statusCode": response.statusCode};
@@ -383,7 +380,6 @@ class ApiService {
 
   Future verifyPayment(Map<String, dynamic> data) async {
     final response = await _dio.post("/verify-payment/", data: data);
-
     return response.data;
   }
 
@@ -403,7 +399,7 @@ class ApiService {
 
   Future<dynamic> getReviews(int productId) async {
     final response = await _dio.get("/products/$productId/reviews/");
-    return response.data; // already JSON
+    return response.data;
   }
 
   Future<Map<String, dynamic>> validateCoupon({
@@ -418,7 +414,6 @@ class ApiService {
 
       final data = response.data as Map<String, dynamic>;
 
-      // Backend returns { success: true, ... } or { error: "..." }
       if (response.statusCode == 200 && data['success'] == true) {
         return data;
       } else {
@@ -467,7 +462,6 @@ class ApiService {
     return {"data": response.data, "statusCode": response.statusCode};
   }
 
-  // ================= WISHLIST =================
   Future<List<dynamic>> getWishlist() async {
     try {
       final response = await _dio.get('/wishlist/');
@@ -545,10 +539,35 @@ class ApiService {
         '/accounts/save-device-token/',
         data: {'fcm_token': token},
       );
-      print('Token saved: ${response.data}');
+      LogService.d('Token saved: ${response.data}');
     } on DioException catch (e) {
-      print('Failed to save token: ${e.response?.data ?? e.message}');
+      LogService.e(
+        'Failed to save token',
+        error: e.response?.data ?? e.message,
+      );
     }
+  }
+
+  /// Refreshes the access token using the stored refresh token.
+  Future<String?> refreshToken() async {
+    try {
+      final refreshToken = await _secureStorage.read('refresh_token');
+      if (refreshToken == null || refreshToken.isEmpty) return null;
+
+      final response = await Dio().post(
+        '${AppConfig.baseUrl}/accounts/token-refresh/',
+        data: {'refresh': refreshToken},
+      );
+
+      if (response.statusCode == 200) {
+        final String newAccess = response.data['access'];
+        await _secureStorage.write('access_token', newAccess);
+        return newAccess;
+      }
+    } catch (e) {
+      LogService.e('Token refresh failed', error: e);
+    }
+    return null;
   }
 
   Future<Map<String, dynamic>> submitReview({
