@@ -550,4 +550,39 @@ class ApiService {
       print('Failed to save token: ${e.response?.data ?? e.message}');
     }
   }
+
+  Future<Map<String, dynamic>> submitReview({
+    required int productId,
+    required int rating,
+    required String comment,
+  }) async {
+    try {
+      final response = await _dio.post(
+        "/products/$productId/reviews/",
+        data: {"rating": rating, "comment": comment},
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return {"success": true, "data": response.data};
+      } else {
+        return {
+          "success": false,
+          "error": response.data is Map
+              ? (response.data['message'] ??
+                    response.data['error'] ??
+                    "Failed to submit review")
+              : "Failed to submit review",
+        };
+      }
+    } on DioException catch (e) {
+      return {
+        "success": false,
+        "error": e.response?.data is Map
+            ? (e.response?.data['message'] ??
+                  e.response?.data['error'] ??
+                  "Network error")
+            : (e.message ?? "Network error"),
+      };
+    }
+  }
 }

@@ -14,7 +14,7 @@ class ProductController extends GetxController {
   RxInt currentProductId = 0.obs;
   RxDouble averageRating = 0.0.obs;
   RxInt reviewCount = 0.obs;
-
+  final RxBool isSubmittingReview = false.obs;
   var isLoading = false.obs;
   var isMoreLoading = false.obs;
   var productListBackup = [].obs;
@@ -216,11 +216,27 @@ class ProductController extends GetxController {
 
   Future<void> fetchReviews(int productId) async {
     try {
+      reviews
+          .clear(); // avoid showing stale reviews from the previous product while the new fetch is in flight
       final response = await _apiService.getReviews(productId);
-      reviews.value = List<dynamic>.from(response);
+
+      List<dynamic> reviewList;
+      if (response is List) {
+        reviewList = response;
+      } else if (response is Map && response['results'] is List) {
+        reviewList = response['results'];
+      } else if (response is Map && response['reviews'] is List) {
+        reviewList = response['reviews'];
+      } else {
+        reviewList = [];
+      }
+
+      reviews.value = List<dynamic>.from(reviewList);
       _calculateAverageRating();
     } catch (e) {
       print("Review error: $e");
+      reviews.clear();
+      _calculateAverageRating();
     }
   }
 
@@ -261,6 +277,31 @@ class ProductController extends GetxController {
       print("Flash Sale Error: $e");
     } finally {
       isFlashSaleLoading(false);
+    }
+  }
+
+  Future<bool> submitReview(int productId, int rating, String comment) async {
+    isSubmittingReview.value = true;
+    try {
+      final result = await ApiService().submitReview(
+        productId: productId,
+        rating: rating,
+        comment: comment,
+      );
+
+      if (result['success'] == true) {
+        await loadProductReviews(productId); // refresh list + average rating
+        return true;
+      } else {
+        Get.snackbar(
+          "Couldn't submit review",
+          result['error'] ?? "Please try again",
+          snackPosition: SnackPosition.BOTTOM,
+        );
+        return false;
+      }
+    } finally {
+      isSubmittingReview.value = false;
     }
   }
 }

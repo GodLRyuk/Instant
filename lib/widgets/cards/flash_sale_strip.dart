@@ -68,6 +68,11 @@ class _FlashSaleStripState extends State<FlashSaleStrip> {
     final width = MediaQuery.of(context).size.width;
     final height = MediaQuery.of(context).size.height;
 
+    final double cardWidth = width * 0.28;
+    const double infoBlockHeight =
+        96; // VIEW button row + price row + spacing + 2-line name + padding
+    final double stripHeight = cardWidth + infoBlockHeight;
+
     return Obx(() {
       if (widget.controller.isFlashSaleLoading.value) {
         return const SizedBox(
@@ -147,7 +152,7 @@ class _FlashSaleStripState extends State<FlashSaleStrip> {
 
           // Horizontal product cards
           SizedBox(
-            height: height * 0.20,
+            height: stripHeight,
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
               itemCount: widget.controller.flashSaleProducts.length,
@@ -155,200 +160,199 @@ class _FlashSaleStripState extends State<FlashSaleStrip> {
                 final product = widget.controller.flashSaleProducts[index];
                 final discountInt = product.discount_percent.toInt();
 
-                return GestureDetector(
-                  onTap: () =>
-                      Get.to(() => ProductDetailsPage(product: product)),
-                  child: Container(
-                    width: width * 0.28,
-                    margin: EdgeInsets.only(
-                      left: width * 0.04,
-                      right:
-                          index ==
-                              widget.controller.flashSaleProducts.length - 1
-                          ? width * 0.04
-                          : 0,
-                      bottom: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: Colors.grey.shade200),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // ── Image block ────────────────────────
-                        AspectRatio(
-                          aspectRatio: 1,
-                          child: Stack(
-                            children: [
-                              Container(
-                                width: double.infinity,
-                                padding: const EdgeInsets.all(10),
-                                decoration: const BoxDecoration(
-                                  color: Color(0xFFF6F8F5),
-                                  borderRadius: BorderRadius.vertical(
-                                    top: Radius.circular(14),
+                return MediaQuery(
+                  data: MediaQuery.of(
+                    context,
+                  ).copyWith(textScaler: const TextScaler.linear(1.0)),
+                  child: GestureDetector(
+                    onTap: () =>
+                        Get.to(() => ProductDetailsPage(product: product)),
+                    child: Container(
+                      width: width * 0.28,
+                      margin: EdgeInsets.only(
+                        left: width * 0.04,
+                        right:
+                            index ==
+                                widget.controller.flashSaleProducts.length - 1
+                            ? width * 0.04
+                            : 0,
+                        bottom: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: Colors.grey.shade200),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // ── Image block ────────────────────────
+                          AspectRatio(
+                            aspectRatio: 1,
+                            child: Stack(
+                              children: [
+                                Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.all(10),
+                                  decoration: const BoxDecoration(
+                                    color: Color(0xFFF6F8F5),
+                                    borderRadius: BorderRadius.vertical(
+                                      top: Radius.circular(14),
+                                    ),
+                                  ),
+                                  child: Image.network(
+                                    product.image,
+                                    fit: BoxFit.contain,
+                                    errorBuilder: (_, _, _) => Icon(
+                                      Icons.image_not_supported,
+                                      color: Colors.grey[300],
+                                    ),
                                   ),
                                 ),
-                                child: Image.network(
-                                  product.image,
-                                  fit: BoxFit.contain,
-                                  errorBuilder: (_, _, _) => Icon(
-                                    Icons.image_not_supported,
-                                    color: Colors.grey[300],
-                                  ),
-                                ),
-                              ),
 
-                              // Discount badge (top-left)
-                              if (discountInt > 0)
+                                // Discount badge (top-left)
+                                if (discountInt > 0)
+                                  Positioned(
+                                    top: 6,
+                                    left: 6,
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 5,
+                                        vertical: 2,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: Colors.red.shade500,
+                                        borderRadius: BorderRadius.circular(5),
+                                      ),
+                                      child: Text(
+                                        '-$discountInt%',
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 9,
+                                          fontWeight: FontWeight.w800,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+
+                                // Wishlist heart (top-right)
                                 Positioned(
                                   top: 6,
-                                  left: 6,
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 5,
-                                      vertical: 2,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: Colors.red.shade500,
-                                      borderRadius: BorderRadius.circular(5),
-                                    ),
-                                    child: Text(
-                                      '-$discountInt%',
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 9,
-                                        fontWeight: FontWeight.w800,
+                                  right: 6,
+                                  child: Obx(
+                                    () => GestureDetector(
+                                      onTap: () =>
+                                          wishlistController.toggle(product),
+                                      child: Container(
+                                        padding: const EdgeInsets.all(4),
+                                        decoration: const BoxDecoration(
+                                          color: Colors.white,
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: Icon(
+                                          wishlistController.isWishlisted(
+                                                product.id,
+                                              )
+                                              ? Icons.favorite
+                                              : Icons.favorite_border,
+                                          size: 12,
+                                          color:
+                                              wishlistController.isWishlisted(
+                                                product.id,
+                                              )
+                                              ? const Color(0xFFE0386A)
+                                              : Colors.grey,
+                                        ),
                                       ),
                                     ),
                                   ),
                                 ),
+                              ],
+                            ),
+                          ),
 
-                              // Wishlist heart (top-right)
-                              Positioned(
-                                top: 6,
-                                right: 6,
-                                child: Obx(
-                                  () => GestureDetector(
-                                    onTap: () =>
-                                        wishlistController.toggle(product),
-                                    child: Container(
-                                      padding: const EdgeInsets.all(4),
-                                      decoration: const BoxDecoration(
-                                        color: Colors.white,
-                                        shape: BoxShape.circle,
-                                      ),
-                                      child: Icon(
-                                        wishlistController.isWishlisted(
-                                              product.id,
-                                            )
-                                            ? Icons.favorite
-                                            : Icons.favorite_border,
-                                        size: 12,
-                                        color:
-                                            wishlistController.isWishlisted(
-                                              product.id,
-                                            )
-                                            ? const Color(0xFFE0386A)
-                                            : Colors.grey,
-                                      ),
-                                    ),
+                          // ── Info block ──────────────────────────
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(8, 6, 8, 8),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // VIEW button on top of price
+                                GestureDetector(
+                                  onTap: () => Get.to(
+                                    () => ProductDetailsPage(product: product),
                                   ),
-                                ),
-                              ),
-
-                              // VIEW button (bottom-right, overlapping image)
-                              Positioned(
-                                bottom: 4,
-                                right: 4,
-                                child: GestureDetector(
-                                  onTap: () {
-                                    Get.to(
-                                      () =>
-                                          ProductDetailsPage(product: product),
-                                    );
-                                  },
                                   child: Container(
+                                    width: double.infinity,
                                     padding: const EdgeInsets.symmetric(
-                                      horizontal: 10,
                                       vertical: 4,
                                     ),
                                     decoration: BoxDecoration(
-                                      color: Colors.white,
+                                      color: Colors.green.shade600,
                                       borderRadius: BorderRadius.circular(6),
-                                      border: Border.all(
-                                        color: Colors.green.shade600,
-                                        width: 1.2,
-                                      ),
                                     ),
-                                    child: Text(
+                                    child: const Text(
                                       "VIEW",
+                                      textAlign: TextAlign.center,
                                       style: TextStyle(
-                                        fontSize: 10,
+                                        fontSize: 15,
                                         fontWeight: FontWeight.w800,
-                                        color: Colors.green.shade700,
+                                        color: Colors.white,
                                       ),
                                     ),
                                   ),
                                 ),
-                              ),
-                            ],
-                          ),
-                        ),
+                                const SizedBox(height: 4),
 
-                        // ── Info block ──────────────────────────
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(8, 6, 8, 8),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              // Price row
-                              Row(
-                                crossAxisAlignment: CrossAxisAlignment.end,
-                                children: [
-                                  Text(
-                                    '₹${product.discounted_price.toStringAsFixed(0)}',
-                                    style: const TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w800,
-                                      color: Colors.black87,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Padding(
-                                    padding: const EdgeInsets.only(bottom: 1.5),
-                                    child: Text(
-                                      '₹${product.price.toStringAsFixed(0)}',
-                                      style: TextStyle(
-                                        fontSize: 10,
-                                        color: Colors.grey.shade400,
-                                        decoration: TextDecoration.lineThrough,
+                                // Price row
+                                Row(
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  children: [
+                                    Text(
+                                      '₹${product.discounted_price.toStringAsFixed(0)}',
+                                      style: const TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w800,
+                                        color: Colors.black87,
                                       ),
                                     ),
-                                  ),
-                                ],
-                              ),
-
-                              const SizedBox(height: 3),
-
-                              // Name
-                              Text(
-                                product.name,
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  fontSize: 11.5,
-                                  fontWeight: FontWeight.w600,
-                                  height: 1.2,
-                                  color: Colors.black87,
+                                    const SizedBox(width: 4),
+                                    Padding(
+                                      padding: const EdgeInsets.only(
+                                        bottom: 1.5,
+                                      ),
+                                      child: Text(
+                                        '₹${product.price.toStringAsFixed(0)}',
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          color: Colors.red.shade400,
+                                          decoration:
+                                              TextDecoration.lineThrough,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                              ),
-                            ],
+
+                                const SizedBox(height: 3),
+
+                                // Name
+                                Text(
+                                  product.name,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontSize: 11.5,
+                                    fontWeight: FontWeight.w600,
+                                    height: 1.2,
+                                    color: Colors.black87,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 );

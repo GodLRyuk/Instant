@@ -6,7 +6,6 @@ import 'package:instant_delivery/controllers/category_controller.dart';
 import 'package:instant_delivery/controllers/product_controller.dart';
 import 'package:instant_delivery/controllers/wishlist_controller.dart';
 import 'package:instant_delivery/pages/product/all_products.dart';
-import 'package:instant_delivery/pages/product/product_details_page.dart';
 import 'package:instant_delivery/widgets/branding/branding.dart';
 import 'package:instant_delivery/widgets/cards/bundle_strip.dart';
 import 'package:instant_delivery/widgets/cards/category_card.dart';
@@ -365,11 +364,18 @@ class _HomePageState extends State<HomePage> {
                       crossAxisCount: 3,
                       crossAxisSpacing: width * 0.025,
                       mainAxisSpacing: height * 0.015,
-                      childAspectRatio: 0.6,
+                      childAspectRatio: 0.56,
                     ),
-                    itemBuilder: (context, index) => PromoProductCard(
-                      product: newArrival[index],
-                      wishlistController: wishlistController,
+                    itemBuilder: (context, index) => MediaQuery(
+                      data: MediaQuery.of(context).copyWith(
+                        textScaler: const TextScaler.linear(
+                          1.0,
+                        ), // ignores system font scale
+                      ),
+                      child: PromoProductCard(
+                        product: newArrival[index],
+                        wishlistController: wishlistController,
+                      ),
                     ),
                   );
                 }),
@@ -406,7 +412,7 @@ class _HomePageState extends State<HomePage> {
                         crossAxisCount: 3,
                         crossAxisSpacing: width * 0.025,
                         mainAxisSpacing: height * 0.015,
-                        childAspectRatio: 0.6,
+                        childAspectRatio: 0.58,
                       ),
                       itemBuilder: (context, index) => PromoProductCard(
                         product: recommended[index],
@@ -509,7 +515,7 @@ class _HomePageState extends State<HomePage> {
                           crossAxisCount: 3,
                           crossAxisSpacing: width * 0.025,
                           mainAxisSpacing: height * 0.015,
-                          childAspectRatio: 0.6,
+                          childAspectRatio: 0.58,
                         ),
                         itemBuilder: (context, index) => PromoProductCard(
                           product: products[index],
@@ -619,7 +625,7 @@ class _HomePageState extends State<HomePage> {
                   crossAxisCount: 3,
                   crossAxisSpacing: width * 0.025,
                   mainAxisSpacing: height * 0.015,
-                  childAspectRatio: 0.6,
+                  childAspectRatio: 0.58,
                 ),
                 itemBuilder: (context, index) => PromoProductCard(
                   product: display[index],

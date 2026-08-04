@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get_core/src/get_main.dart';
 import 'package:get/get_navigation/src/extension_navigation.dart';
+import 'package:get/get_navigation/src/routes/transitions_type.dart';
 import 'package:get/get_state_manager/src/rx_flutter/rx_obx_widget.dart';
 import 'package:instant_delivery/controllers/wishlist_controller.dart';
 import 'package:instant_delivery/pages/product/product_details_page.dart';
@@ -20,15 +21,11 @@ class PromoProductCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final double price = (product.price as num).toDouble();
 
-    // discounted_price may not exist on every product model — fall back
-    // safely to the regular price if it's missing.
     double discountedPrice = price;
     try {
       final dynamic dp = (product as dynamic).discounted_price;
       if (dp != null) discountedPrice = (dp as num).toDouble();
-    } catch (_) {
-      // field doesn't exist — keep discountedPrice == price
-    }
+    } catch (_) {}
 
     final bool hasDiscount = discountedPrice < price;
     final int discountPct = hasDiscount
@@ -36,7 +33,13 @@ class PromoProductCard extends StatelessWidget {
         : 0;
 
     return GestureDetector(
-      onTap: () => Get.to(() => ProductDetailsPage(product: product)),
+      onTap: () => Get.to(
+        () => ProductDetailsPage(product: product),
+        preventDuplicates: false,
+        transition: Transition.fadeIn,
+        duration: const Duration(milliseconds: 700),
+        curve: Curves.easeInOut,
+      ),
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white,
@@ -46,7 +49,6 @@ class PromoProductCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ── Image block ────────────────────────────────
             AspectRatio(
               aspectRatio: 1,
               child: Stack(
@@ -69,8 +71,6 @@ class PromoProductCard extends StatelessWidget {
                       ),
                     ),
                   ),
-
-                  // Discount badge (top-left)
                   if (hasDiscount)
                     Positioned(
                       top: 6,
@@ -94,8 +94,6 @@ class PromoProductCard extends StatelessWidget {
                         ),
                       ),
                     ),
-
-                  // Wishlist heart (top-right)
                   Positioned(
                     top: 6,
                     right: 6,
@@ -121,56 +119,49 @@ class PromoProductCard extends StatelessWidget {
                       ),
                     ),
                   ),
-
-                  // ADD button (bottom-right, overlapping image)
-                  Positioned(
-                    bottom: 4,
-                    right: 4,
-                    child: GestureDetector(
-                      onTap: () {
-                        Get.to(() => ProductDetailsPage(product: product));
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(6),
-                          border: Border.all(
-                            color: Colors.green.shade600,
-                            width: 1.2,
-                          ),
-                        ),
-                        child: Text(
-                          "VIEW",
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w800,
-                            color: Colors.green.shade700,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
                 ],
               ),
             ),
-
-            // ── Info block ──────────────────────────────────
             Padding(
               padding: const EdgeInsets.fromLTRB(8, 6, 8, 8),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // VIEW button on top of price
+                  GestureDetector(
+                    onTap: () => Get.to(
+                      () => ProductDetailsPage(product: product),
+                      preventDuplicates: false,
+                      transition: Transition.fadeIn,
+                      duration: const Duration(milliseconds: 700),
+                      curve: Curves.easeInOut,
+                    ),
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.green.shade600,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Text(
+                        "VIEW",
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w800,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       Text(
                         '₹${discountedPrice.toStringAsFixed(0)}',
                         style: const TextStyle(
-                          fontSize: 14,
+                          fontSize: 16,
                           fontWeight: FontWeight.w800,
                           color: Colors.black87,
                         ),
@@ -182,8 +173,8 @@ class PromoProductCard extends StatelessWidget {
                           child: Text(
                             '₹${price.toStringAsFixed(0)}',
                             style: TextStyle(
-                              fontSize: 10,
-                              color: Colors.grey.shade400,
+                              fontSize: 13,
+                              color: Colors.red.shade400,
                               decoration: TextDecoration.lineThrough,
                             ),
                           ),

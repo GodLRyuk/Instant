@@ -70,14 +70,18 @@ class BundleStrip extends StatelessWidget {
 
           // Bundle cards
           SizedBox(
-            height: height * 0.28,
+            height: height * 0.34,
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
               padding: EdgeInsets.symmetric(horizontal: width * 0.04),
               itemCount: controller.bundleList.length,
               itemBuilder: (context, index) {
                 final BundleModel bundle = controller.bundleList[index];
-                return _BundleCard(bundle: bundle, width: width);
+                return _BundleCard(
+                  bundle: bundle,
+                  width: width,
+                  controller: controller,
+                );
               },
             ),
           ),
@@ -93,8 +97,13 @@ class BundleStrip extends StatelessWidget {
 class _BundleCard extends StatelessWidget {
   final BundleModel bundle;
   final double width;
+  final BundleController controller;
 
-  const _BundleCard({required this.bundle, required this.width});
+  const _BundleCard({
+    required this.bundle,
+    required this.width,
+    required this.controller,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -209,41 +218,6 @@ class _BundleCard extends StatelessWidget {
                       ),
                     ),
                   ),
-
-                // ADD button (bottom-right, overlapping image)
-                Positioned(
-                  bottom: 4,
-                  right: 4,
-                  child: GestureDetector(
-                    onTap: () {
-                      // TODO: hook up "add bundle to cart" logic here,
-                      // then navigate to the cart once items are added.
-                      Get.to(() => const CartPage());
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(
-                          color: Colors.green.shade600,
-                          width: 1.2,
-                        ),
-                      ),
-                      child: Text(
-                        "ADD",
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w800,
-                          color: Colors.green.shade700,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
               ],
             ),
           ),
@@ -252,10 +226,39 @@ class _BundleCard extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                // ── Full-width ADD button ────────────────
+                GestureDetector(
+                  onTap: () async {
+                    await controller.addBundleToCart(bundle);
+                    Get.to(() => const CartPage());
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 6),
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: Colors.green.shade600,
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(
+                        color: Colors.green.shade600,
+                        width: 1.2,
+                      ),
+                    ),
+                    child: const Text(
+                      "ADD",
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 6),
                 Text(
                   bundle.name,
+                  textAlign: TextAlign.start,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
@@ -267,6 +270,7 @@ class _BundleCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Row(
+                  mainAxisAlignment: MainAxisAlignment.start,
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Text(
@@ -284,8 +288,8 @@ class _BundleCard extends StatelessWidget {
                         child: Text(
                           '₹${bundle.originalPrice.toStringAsFixed(0)}',
                           style: TextStyle(
-                            fontSize: 11,
-                            color: Colors.grey.shade400,
+                            fontSize: 13,
+                            color: Colors.red.shade400,
                             decoration: TextDecoration.lineThrough,
                           ),
                         ),

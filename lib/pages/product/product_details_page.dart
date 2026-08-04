@@ -62,9 +62,12 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
   @override
   void initState() {
     super.initState();
-
     currentProduct.value = widget.product;
     controller.loadProductReviews(widget.product.id);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      controller.loadProductReviews(widget.product.id);
+    });
+
     _slotsFuture = _fetchSlots();
 
     if (Get.isRegistered<ProductController>(tag: "rec")) {
@@ -741,7 +744,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
   }
 
   // ── Reviews section ───────────────────────────────────────────
-  Widget _buildReviewsSection(dynamic product) {
+  Widget _buildReviewsSection(dynamic productId) {
     return Obx(() {
       final reviews = controller.reviews;
       return Container(
@@ -754,11 +757,54 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              "Reviews (${reviews.length})",
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  "Reviews (${reviews.length})",
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+                GestureDetector(
+                  onTap: () => _showWriteReviewSheet(productId),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE8F5E9),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: const Color(0xFFA5D6A7)),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.rate_review_outlined,
+                          size: 15,
+                          color: Color(0xFF2E7D32),
+                        ),
+                        SizedBox(width: 4),
+                        Text(
+                          "Write a review",
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF2E7D32),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 10),
+
+            // ── Average rating row ──
             Row(
               children: [
                 const Icon(Icons.star, color: Colors.orange, size: 20),
@@ -770,6 +816,8 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
               ],
             ),
             const SizedBox(height: 15),
+
+            // ── Review list ──
             reviews.isEmpty
                 ? const Text(
                     "No reviews yet",
@@ -803,13 +851,20 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(
-                                    r['user_name'] ?? "Unknown",
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                    ),
+                                  Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text(
+                                        r['user_name'] ?? "Unknown",
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      _buildStarRow(r['rating'], size: 15),
+                                    ],
                                   ),
-                                  const SizedBox(height: 4),
+                                  const SizedBox(height: 6),
                                   Text(
                                     r['comment'] ?? "",
                                     style: const TextStyle(
@@ -818,17 +873,6 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                                   ),
                                 ],
                               ),
-                            ),
-                            Row(
-                              children: [
-                                const Icon(
-                                  Icons.star,
-                                  color: Colors.orange,
-                                  size: 16,
-                                ),
-                                const SizedBox(width: 3),
-                                Text("${r['rating']}"),
-                              ],
                             ),
                           ],
                         ),
@@ -839,6 +883,32 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
         ),
       );
     });
+  }
+
+  Widget _buildStarRow(dynamic rating, {double size = 16}) {
+    final int filledStars = (rating is num) ? rating.round().clamp(0, 5) : 0;
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: List.generate(5, (index) {
+        final isFilled = index < filledStars;
+        return Icon(
+          isFilled ? Icons.star : Icons.star_border,
+          size: size,
+          color: isFilled ? Colors.orange : Colors.grey.shade400,
+        );
+      }),
+    );
+  }
+
+  void _showWriteReviewSheet(int productId) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) =>
+          _WriteReviewSheet(productId: productId, controller: controller),
+    );
   }
 }
 
@@ -1341,6 +1411,164 @@ class _BuyNowScheduleSheetState extends State<_BuyNowScheduleSheet> {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _WriteReviewSheet extends StatefulWidget {
+  final int productId;
+  final ProductController controller;
+
+  const _WriteReviewSheet({required this.productId, required this.controller});
+
+  @override
+  State<_WriteReviewSheet> createState() => _WriteReviewSheetState();
+}
+
+class _WriteReviewSheetState extends State<_WriteReviewSheet> {
+  int _rating = 0;
+  final TextEditingController _commentController = TextEditingController();
+
+  @override
+  void dispose() {
+    _commentController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
+      child: Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const Text(
+              "Write a Review",
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              "Your rating",
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: List.generate(5, (index) {
+                final starValue = index + 1;
+                return GestureDetector(
+                  onTap: () => setState(() => _rating = starValue),
+                  child: Padding(
+                    padding: const EdgeInsets.only(right: 4),
+                    child: Icon(
+                      starValue <= _rating ? Icons.star : Icons.star_border,
+                      color: Colors.orange,
+                      size: 32,
+                    ),
+                  ),
+                );
+              }),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              "Your review",
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _commentController,
+              maxLines: 4,
+              decoration: InputDecoration(
+                hintText: "Share your experience with this product...",
+                filled: true,
+                fillColor: Colors.grey.shade100,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: BorderSide.none,
+                ),
+                contentPadding: const EdgeInsets.all(12),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Obx(() {
+              final isSubmitting = widget.controller.isSubmittingReview.value;
+              final canSubmit = _rating > 0 && !isSubmitting;
+
+              return SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: ElevatedButton(
+                  onPressed: canSubmit
+                      ? () async {
+                          final success = await widget.controller.submitReview(
+                            widget.productId,
+                            _rating,
+                            _commentController.text.trim(),
+                          );
+                          if (success) {
+                            Navigator.pop(context);
+                            Get.snackbar(
+                              "Thank you!",
+                              "Your review has been submitted",
+                              snackPosition: SnackPosition.BOTTOM,
+                            );
+                          } else {
+                            Get.snackbar(
+                              "Something went wrong",
+                              "Please try again",
+                              snackPosition: SnackPosition.BOTTOM,
+                            );
+                          }
+                        }
+                      : null,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF3CB549),
+                    disabledBackgroundColor: Colors.grey.shade300,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: isSubmitting
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Text(
+                          "Submit Review",
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                ),
+              );
+            }),
+          ],
         ),
       ),
     );

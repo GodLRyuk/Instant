@@ -8,7 +8,6 @@ import 'package:instant_delivery/pages/membership/pass_purchase_screen.dart';
 import 'package:instant_delivery/services/api_service.dart';
 import 'package:instant_delivery/services/location_service.dart'
     as LocationService;
-import 'package:instant_delivery/utils/delivery_charge.dart';
 import 'package:instant_delivery/widgets/navigation/custom_app_bar.dart';
 
 class CheckoutPage extends StatefulWidget {
@@ -99,13 +98,10 @@ class _CheckoutPageState extends State<CheckoutPage> {
   void initState() {
     super.initState();
     addressController.fetchAddresses().then((_) {
-      // Once addresses load, if one is already selected, fetch the fee for it
       if (addressController.selectedAddress.value != null) {
         _fetchDeliveryFee();
       }
     });
-
-    // ✅ NEW — refetch fee whenever the selected address changes
     ever(addressController.selectedAddress, (_) {
       _fetchDeliveryFee();
     });

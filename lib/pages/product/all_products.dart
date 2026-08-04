@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:instant_delivery/controllers/category_controller.dart';
 import 'package:instant_delivery/controllers/product_controller.dart';
-import 'package:instant_delivery/models/product_model.dart';
 import 'package:instant_delivery/pages/product/product_details_page.dart';
 import 'package:instant_delivery/widgets/branding/branding.dart';
 import 'package:instant_delivery/widgets/navigation/custom_app_bar.dart';
