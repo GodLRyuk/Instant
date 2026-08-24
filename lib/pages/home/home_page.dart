@@ -6,7 +6,6 @@ import 'package:instant_delivery/controllers/category_controller.dart';
 import 'package:instant_delivery/controllers/product_controller.dart';
 import 'package:instant_delivery/controllers/wishlist_controller.dart';
 import 'package:instant_delivery/pages/product/all_products.dart';
-import 'package:instant_delivery/widgets/branding/branding.dart';
 import 'package:instant_delivery/widgets/cards/bundle_strip.dart';
 import 'package:instant_delivery/widgets/cards/category_card.dart';
 import 'package:instant_delivery/widgets/cards/product_card.dart';
@@ -54,14 +53,6 @@ class _HomePageState extends State<HomePage> {
   );
   final WishlistController wishlistController = Get.put(WishlistController());
 
-  // ── Dynamic curated category banner sections ─────────────────────
-  // Instead of a fixed list, a section is generated automatically for
-  // every real category in categoryController.categoryList. The title
-  // and subtitle vary per category using the templates below — swap
-  // "{category}" for the actual category name (e.g. "Chocolate
-  // temptations await" for a "Chocolate" category, "Stock up on
-  // Snacks" for a "Snacks" category, etc). Templates rotate by
-  // category index so results are varied but consistent on rebuild.
   final List<String> _sectionTitleTemplates = const [
     "{category} temptations await",
     "Discover more {category}",
@@ -228,13 +219,8 @@ class _HomePageState extends State<HomePage> {
                 ],
               ),
               SizedBox(height: height * 0.01),
-
-              // 🔥 Categories Title
-              // SectionHeader(title: 'Categories'),
-              SizedBox(height: height * 0.005),
-              // ✅ GETX CATEGORY LIST
               SizedBox(
-                height: height * 0.13,
+                height: height * 0.10,
                 child: Obx(() {
                   if (categoryController.isLoading.value) {
                     return const Center(child: CircularProgressIndicator());
@@ -267,11 +253,11 @@ class _HomePageState extends State<HomePage> {
                           child: Column(
                             children: [
                               CircleAvatar(
-                                radius: width * 0.08,
+                                radius: width * 0.06,
                                 backgroundColor: Colors.green.shade50,
                                 child: Image.network(
                                   category.image ?? '',
-                                  width: width * 0.1,
+                                  width: width * 0.08,
                                   height: width * 0.1,
                                   fit: BoxFit.contain,
                                   errorBuilder: (context, error, stackTrace) {
@@ -282,15 +268,8 @@ class _HomePageState extends State<HomePage> {
                                     );
                                   },
                                 ),
-                                // child: Icon(
-                                //   getIcon(
-                                //     category.name,
-                                //   ), // or icon field if you add
-                                //   color: Colors.green,
-                                //   size: width * 0.07,
-                                // ),
                               ),
-                              SizedBox(height: height * 0.008),
+                              // SizedBox(height: height * 0.008),
                               Text(
                                 category.name,
                                 maxLines: 1,
@@ -305,8 +284,6 @@ class _HomePageState extends State<HomePage> {
                   );
                 }),
               ),
-
-              SizedBox(height: height * 0.002),
               // 🔥 Banner
               Obx(() {
                 if (topBannerController.isLoading.value) {
@@ -559,8 +536,8 @@ class _HomePageState extends State<HomePage> {
                 );
               }),
 
-              SizedBox(height: height * 0.05),
-              AppFooterBranding(),
+              // SizedBox(height: height * 0.05),
+              // AppFooterBranding(),
             ],
           ),
         ),

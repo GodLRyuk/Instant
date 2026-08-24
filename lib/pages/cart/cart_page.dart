@@ -571,9 +571,9 @@ class _CartPageState extends State<CartPage> {
     return Expanded(
       child: GestureDetector(
         onTap: () => setState(() {
-          _deliveryType = type;
-          _selectedSlotStart = null;
-          _selectedSlotEnd = null;
+          // _deliveryType = type;
+          // _selectedSlotStart = null;
+          // _selectedSlotEnd = null;
         }),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
