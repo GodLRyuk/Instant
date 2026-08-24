@@ -2,7 +2,7 @@
 <network-security-config>
     <!-- Allow cleartext (HTTP) for local development -->
     <domain-config cleartextTrafficPermitted="true">
-        <domain includeSubdomains="true">192.168.1.19</domain>
+        <domain includeSubdomains="true">192.168.1.29</domain>
         <domain includeSubdomains="true">localhost</domain>
         <domain includeSubdomains="true">10.0.2.2</domain> <!-- Android Emulator Loopback -->
     </domain-config>

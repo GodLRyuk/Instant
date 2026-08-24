@@ -46,12 +46,8 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
   final RxBool isBuyNowLoading = false.obs;
 
   // ── Scheduling state (for Buy Now bottom sheet) ───────────────
-  String _deliveryType = 'ASAP';
   List<dynamic> _slotDays = [];
   bool _slotsLoading = true;
-  int _selectedDayIndex = 0;
-  String? _selectedSlotStart;
-  String? _selectedSlotEnd;
 
   // Future for the initial slots fetch, so "Buy Now" can await it if the
   // user taps before slots have finished loading. Initialized eagerly
@@ -118,9 +114,6 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
     return '$hour:$minute $period';
   }
 
-  List<dynamic> get _currentSlots =>
-      _slotDays.isEmpty ? [] : (_slotDays[_selectedDayIndex]['slots'] ?? []);
-
   String? _toBackendTime(String? t) {
     if (t == null) return null;
     if (!t.contains('AM') && !t.contains('PM')) {
@@ -137,12 +130,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
   // ── Buy Now bottom sheet ──────────────────────────────────────
   void _showBuyNowSheet(dynamic product) {
     // Reset state each time sheet opens
-    setState(() {
-      _deliveryType = 'ASAP';
-      _selectedSlotStart = null;
-      _selectedSlotEnd = null;
-      _selectedDayIndex = 0;
-    });
+    setState(() {});
 
     showModalBottomSheet(
       context: context,
@@ -191,7 +179,12 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
   Future<void> showFullWidthLoader(dynamic product) async {
     showDialog(
       context: context,
-      barrierColor: const Color.fromARGB(255, 255, 255, 255).withOpacity(0.3),
+      barrierColor: const Color.fromARGB(
+        255,
+        255,
+        255,
+        255,
+      ).withValues(alpha: 0.3),
       barrierDismissible: false,
       builder: (context) {
         return const SizedBox.expand(
@@ -1027,12 +1020,12 @@ class _BuyNowScheduleSheetState extends State<_BuyNowScheduleSheet> {
                             '20–30 min',
                           ),
                           const SizedBox(width: 8),
-                          _toggleBtn(
-                            'SCHEDULED',
-                            Icons.calendar_month,
-                            'Schedule',
-                            'Pick date & time',
-                          ),
+                          // _toggleBtn(
+                          //   'SCHEDULED',
+                          //   Icons.calendar_month,
+                          //   'Schedule',
+                          //   'Pick date & time',
+                          // ),
                         ],
                       ),
 

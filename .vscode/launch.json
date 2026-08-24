@@ -2,10 +2,11 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "instant_delivery",
+            "name": "instant_delivery (dev)",
             "request": "launch",
             "type": "dart",
             "args": [
+                "--flavor", "dev",
                 "--dart-define", "RAZORPAY_KEY=rzp_test_StsVgck8iNAA8a"
             ]
         },
@@ -15,6 +16,7 @@
             "type": "dart",
             "flutterMode": "profile",
             "args": [
+                "--flavor", "dev",
                 "--dart-define", "RAZORPAY_KEY=rzp_test_StsVgck8iNAA8a"
             ]
         },
@@ -24,6 +26,7 @@
             "type": "dart",
             "flutterMode": "release",
             "args": [
+                "--flavor", "prod",
                 "--dart-define", "RAZORPAY_KEY=rzp_live_your_actual_key"
             ]
         }

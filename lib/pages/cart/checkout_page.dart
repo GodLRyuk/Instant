@@ -42,18 +42,21 @@ class _CheckoutPageState extends State<CheckoutPage> {
   final PassController passController = Get.put(PassController()); // ← add
 
   bool showAllItems = false;
-
-  // Tracks whether the Confirm Order flow (fetching location + preparing
-  // navigation to PaymentPage) is currently in progress, so we can show a
-  // spinner and block duplicate taps.
+  bool showHiddenCharges = false;
+  List<Map<String, dynamic>> get _hiddenCharges => [
+    {"label": "Paper Bag Charge", "amount": 10.0},
+    // {"label": "Carry Bag Charge", "amount": 5.0},
+  ];
+  double get _hiddenChargesTotal => _hiddenCharges.fold<double>(
+    0.0,
+    (sum, c) => sum + (c["amount"] as double),
+  );
   final RxBool isConfirmingOrder = false.obs;
   final RxDouble estimatedDeliveryFee = 0.0.obs;
   final RxBool isFeeLoading = false.obs;
   final RxString feeError = ''.obs;
 
   final TextEditingController _couponCtrl = TextEditingController();
-  final bool _isApplyingCoupon = false;
-  String _couponError = '';
   String _localCouponCode = '';
   double _localDiscount = 0.0;
 
@@ -90,9 +93,11 @@ class _CheckoutPageState extends State<CheckoutPage> {
   double get finalAmount =>
       (widget.totalAmount - _activeDiscount) +
       deliveryCharge -
-      couponController.discountAmount.value;
+      couponController.discountAmount.value +
+      _hiddenChargesTotal;
 
-  double get subtotal => widget.totalAmount + deliveryCharge;
+  double get subtotal =>
+      widget.totalAmount + deliveryCharge + _hiddenChargesTotal;
 
   @override
   void initState() {
@@ -162,7 +167,6 @@ class _CheckoutPageState extends State<CheckoutPage> {
     setState(() {
       _localCouponCode = '';
       _localDiscount = 0.0;
-      _couponError = '';
       _couponCtrl.clear();
     });
   }
@@ -203,7 +207,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
                         borderRadius: BorderRadius.circular(20),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.05),
+                            color: Colors.black.withValues(alpha: 0.05),
                             blurRadius: 10,
                             offset: const Offset(0, 4),
                           ),
@@ -315,7 +319,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
                         borderRadius: BorderRadius.circular(20),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.05),
+                            color: Colors.black.withValues(alpha: 0.05),
                             blurRadius: 10,
                           ),
                         ],
@@ -559,7 +563,75 @@ class _CheckoutPageState extends State<CheckoutPage> {
                               ),
                             ),
                           ],
-
+                          const Divider(),
+                          GestureDetector(
+                            onTap: () => setState(
+                              () => showHiddenCharges = !showHiddenCharges,
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Row(
+                                  children: [
+                                    const Text("Hidden Charges"),
+                                    Icon(
+                                      showHiddenCharges
+                                          ? Icons.keyboard_arrow_up
+                                          : Icons.keyboard_arrow_down,
+                                      size: 18,
+                                      color: Colors.grey,
+                                    ),
+                                  ],
+                                ),
+                                Text(
+                                  "₹${_hiddenChargesTotal.toStringAsFixed(2)}",
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.green,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          AnimatedCrossFade(
+                            duration: const Duration(milliseconds: 200),
+                            crossFadeState: showHiddenCharges
+                                ? CrossFadeState.showFirst
+                                : CrossFadeState.showSecond,
+                            firstChild: Padding(
+                              padding: const EdgeInsets.only(top: 8, left: 8),
+                              child: Column(
+                                children: _hiddenCharges.map((charge) {
+                                  return Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 3,
+                                    ),
+                                    child: Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Text(
+                                          charge["label"],
+                                          style: TextStyle(
+                                            color: Colors.grey.shade700,
+                                            fontSize: 13,
+                                          ),
+                                        ),
+                                        Text(
+                                          "₹${(charge["amount"] as double).toStringAsFixed(2)}",
+                                          style: TextStyle(
+                                            color: Colors.grey.shade700,
+                                            fontSize: 13,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                }).toList(),
+                              ),
+                            ),
+                            secondChild: const SizedBox.shrink(),
+                          ),
                           const Divider(),
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1048,7 +1120,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 10),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.2),
+          color: Colors.white.withValues(alpha: 0.2),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(

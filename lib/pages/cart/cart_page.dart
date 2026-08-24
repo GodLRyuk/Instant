@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:instant_delivery/controllers/address_controller.dart';
 import 'package:instant_delivery/controllers/cart_controller.dart';
 import 'package:instant_delivery/controllers/coupon_controller.dart';
 import 'package:instant_delivery/controllers/pass_controller.dart';
@@ -29,12 +30,30 @@ class _CartPageState extends State<CartPage> {
   int _selectedDayIndex = 0;
   String? _selectedSlotStart;
   String? _selectedSlotEnd;
+  final AddressController addressController = Get.put(AddressController());
 
+  final RxDouble estimatedDeliveryFee = 0.0.obs;
+  final RxBool isFeeLoading = false.obs;
+  final RxString feeError = ''.obs;
   @override
   void initState() {
     super.initState();
     cartController.fetchCart();
     _fetchSlots();
+    addressController.fetchAddresses().then((_) {
+      if (addressController.selectedAddress.value != null) {
+        _fetchDeliveryFee();
+      }
+    });
+    ever(addressController.selectedAddress, (_) {
+      _fetchDeliveryFee();
+    });
+    // Re-fetch fee if cart contents change quantity/items, since fee can depend on order size
+    ever(cartController.cartItems, (_) {
+      if (addressController.selectedAddress.value != null) {
+        _fetchDeliveryFee();
+      }
+    });
   }
 
   @override
@@ -82,6 +101,48 @@ class _CartPageState extends State<CartPage> {
     return '${h.toString().padLeft(2, '0')}:${tp[1]}:00';
   }
 
+  Future<void> _fetchDeliveryFee() async {
+    final address = addressController.selectedAddress.value;
+    if (address == null) return;
+
+    isFeeLoading.value = true;
+    feeError.value = '';
+
+    try {
+      final apiItems = cartController.cartItems
+          .map(
+            (item) => {"product": item.product_id, "quantity": item.quantity},
+          )
+          .toList();
+
+      final res = await ApiService().validateOrder(
+        items: apiItems,
+        addressId: address.id,
+        currentLat: null,
+        currentLng: null,
+      );
+
+      if (res["statusCode"] == 200) {
+        final data = res["data"];
+        estimatedDeliveryFee.value = (data["delivery_fee"] as num).toDouble();
+      } else {
+        final data = res["data"];
+        String msg = "Could not calculate delivery fee for this address.";
+        if (data is Map) {
+          final val = data.values.first;
+          msg = val is List ? val.first.toString() : val.toString();
+        }
+        feeError.value = msg;
+        estimatedDeliveryFee.value = 0.0;
+      }
+    } catch (e) {
+      feeError.value = "Failed to check delivery availability.";
+      estimatedDeliveryFee.value = 0.0;
+    } finally {
+      isFeeLoading.value = false;
+    }
+  }
+
   // ── Build ─────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
@@ -98,9 +159,14 @@ class _CartPageState extends State<CartPage> {
         }
 
         final cartTotal = cartController.cart.value?.cartTotal ?? 0;
-        final delivery = passController.hasPass.value && cartTotal >= 149
+        // final delivery = passController.hasPass.value && cartTotal >= 149
+        //     ? 0.0
+        //     : DeliveryCharge.calculate(cartTotal);
+
+        final minOrder = 149;
+        final delivery = passController.hasPass.value && cartTotal >= minOrder
             ? 0.0
-            : DeliveryCharge.calculate(cartTotal);
+            : estimatedDeliveryFee.value;
         final discount = couponController.discountAmount.value;
         final subtotal = cartTotal + delivery;
         final finalAmount = subtotal - discount;

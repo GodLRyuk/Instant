@@ -20,8 +20,6 @@ class BundleController extends GetxController {
       isLoading(true);
       final response = await _apiService.getBundles();
       bundleList.value = response.map((e) => BundleModel.fromJson(e)).toList();
-    } catch (e) {
-      print("Bundle Error: $e");
     } finally {
       isLoading(false);
     }

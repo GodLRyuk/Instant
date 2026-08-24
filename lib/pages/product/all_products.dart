@@ -10,7 +10,6 @@ import 'package:instant_delivery/widgets/navigation/custom_app_bar.dart';
 const _kPrimary = Color(0xFF1DB954); // vivid green
 const _kPrimaryDark = Color(0xFF0F8C3A); // deep green
 const _kSurface = Color(0xFFFFFFFF);
-const _kCard = Colors.white;
 const _kTextPrimary = Color(0xFF111827);
 const _kTextMuted = Color(0xFF6B7280);
 const _kBorder = Color(0xFFE5E7EB);
@@ -35,12 +34,6 @@ class _AllProductsPageState extends State<AllProductsPage> {
 
   // Simple placeholder brand list for the "Shop by brands" strip.
   // Replace with a real BrandController / API-backed list when available.
-  final List<Map<String, String>> _brands = const [
-    {"name": "Boldfit", "logo": ""},
-    {"name": "Cello", "logo": ""},
-    {"name": "Pexpo", "logo": ""},
-    {"name": "Milton", "logo": ""},
-  ];
 
   @override
   void initState() {
@@ -69,16 +62,6 @@ class _AllProductsPageState extends State<AllProductsPage> {
   void dispose() {
     searchController.dispose();
     super.dispose();
-  }
-
-  Future<void> _doSearch(String value) async {
-    if (value.trim().isEmpty) return;
-    final controller = Get.find<ProductController>(tag: "search");
-    await controller.filterBySearch(value.trim());
-    Get.to(
-      () => const AllProductsPage(),
-      arguments: {"isSearch": true, "results": controller.productList.toList()},
-    );
   }
 
   @override
@@ -255,27 +238,6 @@ class _AllProductsPageState extends State<AllProductsPage> {
   }
 
   // ── Shop by brands ──────────────────────────────────────────────
-  Widget _buildBrandsSection() {
-    return Container(
-      margin: const EdgeInsets.only(top: 8),
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
-      color: const Color(0xFFF7F3E9),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            "Shop by brands",
-            style: TextStyle(
-              fontSize: 17,
-              fontWeight: FontWeight.w700,
-              color: _kTextPrimary,
-            ),
-          ),
-          const SizedBox(height: 14),
-        ],
-      ),
-    );
-  }
 }
 
 // ── Product card (grid style) ───────────────────────────────────────
@@ -364,7 +326,7 @@ class _ProductCard extends StatelessWidget {
                             shape: BoxShape.circle,
                             color: i == 0
                                 ? _kTextMuted
-                                : _kTextMuted.withOpacity(0.3),
+                                : _kTextMuted.withValues(alpha: 0.3),
                           ),
                         );
                       }),

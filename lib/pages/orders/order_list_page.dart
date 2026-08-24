@@ -122,8 +122,10 @@ class OrderPage extends StatelessWidget {
                               const SizedBox(width: 10),
                               Text(
                                 "Order $productName",
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
                                 style: const TextStyle(
-                                  fontSize: 16,
+                                  fontSize: 14,
                                   fontWeight: FontWeight.w700,
                                 ),
                               ),
@@ -131,25 +133,25 @@ class OrderPage extends StatelessWidget {
                           ),
 
                           /// STATUS BADGE
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 6,
-                            ),
-                            decoration: BoxDecoration(
-                              color: statusColor,
-                              borderRadius: BorderRadius.circular(30),
-                            ),
-                            child: Text(
-                              order['order_status'].toUpperCase(),
-                              style: TextStyle(
-                                color: Colors.black,
-                                fontWeight: FontWeight.w700,
-                                fontSize: 11,
-                                letterSpacing: 0.5,
-                              ),
-                            ),
-                          ),
+                          // Container(
+                          //   padding: const EdgeInsets.symmetric(
+                          //     horizontal: 12,
+                          //     vertical: 6,
+                          //   ),
+                          //   decoration: BoxDecoration(
+                          //     color: statusColor,
+                          //     borderRadius: BorderRadius.circular(30),
+                          //   ),
+                          //   child: Text(
+                          //     order['order_status'].toUpperCase(),
+                          //     style: TextStyle(
+                          //       color: Colors.black,
+                          //       fontWeight: FontWeight.w700,
+                          //       fontSize: 11,
+                          //       letterSpacing: 0.5,
+                          //     ),
+                          //   ),
+                          // ),
                         ],
                       ),
 
@@ -204,6 +206,25 @@ class OrderPage extends StatelessWidget {
                               size: 18,
                             ),
                             label: const Text("View Details"),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              color: statusColor,
+                              borderRadius: BorderRadius.circular(30),
+                            ),
+                            child: Text(
+                              order['order_status'].toUpperCase(),
+                              style: TextStyle(
+                                color: Colors.black,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 11,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
                           ),
                           const Icon(
                             Icons.arrow_forward_ios,

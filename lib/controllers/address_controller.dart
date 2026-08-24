@@ -48,9 +48,7 @@ class AddressController extends GetxController {
       );
 
       await fetchAddresses(); // refresh list
-    } catch (e) {
-      print("Add Address Error: $e");
-    }
+    } catch (e) {}
   }
 
   /// 🔥 SELECT ADDRESS

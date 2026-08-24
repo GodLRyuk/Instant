@@ -80,8 +80,6 @@ class CartController extends GetxController {
       final data = await _apiService.getCartItems();
       cart.value = data;
       cartItems.value = data.items;
-    } catch (e) {
-      print("Cart error: $e");
     } finally {
       isLoading.value = false;
     }
@@ -94,7 +92,6 @@ class CartController extends GetxController {
       await fetchCart();
       return true;
     } catch (e) {
-      print(e);
       return false;
     }
   }

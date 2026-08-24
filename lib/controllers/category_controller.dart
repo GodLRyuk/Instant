@@ -22,8 +22,6 @@ class CategoryController extends GetxController {
 
       categoryList.value = data;
     } catch (e) {
-      print("Category Error: $e");
-
       // fallback (optional)
       categoryList.value = [
         CategoryModel(id: 1, name: "Food"),
