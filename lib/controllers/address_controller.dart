@@ -38,13 +38,19 @@ class AddressController extends GetxController {
     required String city,
     required String state,
     required String pincode,
+    required String nearestLandmark,
+    required String name,
+    required String phone,
   }) async {
     try {
       await _apiService.addAddress(
         fullAddress: fullAddress,
+        name: name,
+        phone: phone,
         city: city,
         state: state,
         pincode: pincode,
+        nearestLandmark: nearestLandmark,
       );
 
       await fetchAddresses(); // refresh list

@@ -1142,6 +1142,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
     final cityCtrl = TextEditingController();
     final stateCtrl = TextEditingController();
     final pincodeCtrl = TextEditingController();
+    final nearestLandmarkCtrl = TextEditingController();
 
     Get.bottomSheet(
       Container(
@@ -1169,6 +1170,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
               _inputField("City", cityCtrl),
               _inputField("State", stateCtrl),
               _inputField("Pincode", pincodeCtrl),
+              _inputField("Nearest Landmark", nearestLandmarkCtrl),
               const SizedBox(height: 20),
               SizedBox(
                 width: double.infinity,
@@ -1179,9 +1181,12 @@ class _CheckoutPageState extends State<CheckoutPage> {
                   onPressed: () async {
                     await addressController.addNewAddress(
                       fullAddress: fullAddressCtrl.text,
+                      name: nameCtrl.text,
+                      phone: phoneCtrl.text,
                       city: cityCtrl.text,
                       state: stateCtrl.text,
                       pincode: pincodeCtrl.text,
+                      nearestLandmark: nearestLandmarkCtrl.text,
                     );
                     Get.back();
                     await addressController.fetchAddresses();

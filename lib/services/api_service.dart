@@ -299,18 +299,24 @@ class ApiService {
 
   Future<void> addAddress({
     required String fullAddress,
+    required String name,
+    required String phone,
     required String city,
     required String state,
     required String pincode,
+    required String nearestLandmark,
   }) async {
     try {
       final response = await _dio.post(
         "/addresses/add/",
         data: {
           "full_address": fullAddress,
+          "name": name,
+          "phone": phone,
           "city": city,
           "state": state,
           "pincode": pincode,
+          "landmark": nearestLandmark,
         },
       );
 
