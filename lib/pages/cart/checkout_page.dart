@@ -86,6 +86,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
     if (passController.hasPass.value && subtotal >= minOrder) {
       return 0.0; // free with pass — unchanged
     }
+
     return estimatedDeliveryFee
         .value; // ✅ was: DeliveryCharge.calculate(subtotal)
   }
@@ -141,7 +142,9 @@ class _CheckoutPageState extends State<CheckoutPage> {
         estimatedDeliveryFee.value = (data["delivery_fee"] as num).toDouble();
       } else {
         final data = res["data"];
-        String msg = "Could not calculate delivery fee for this address.";
+        String msg =
+            data['non_field_errors']?.first?.toString() ??
+            "Delivery not available for this address.";
         if (data is Map) {
           final val = data.values.first;
           msg = val is List ? val.first.toString() : val.toString();
@@ -150,7 +153,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
         estimatedDeliveryFee.value = 0.0;
       }
     } catch (e) {
-      feeError.value = "Failed to check delivery availability.";
+      feeError.value = "Delivery not available for this address.";
       estimatedDeliveryFee.value = 0.0;
     } finally {
       isFeeLoading.value = false;

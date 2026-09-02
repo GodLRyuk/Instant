@@ -6,6 +6,7 @@
             "request": "launch",
             "type": "dart",
             "args": [
+                "--release",
                 "--flavor", "dev",
                 "--dart-define", "RAZORPAY_KEY=rzp_test_StsVgck8iNAA8a"
             ]
@@ -16,6 +17,7 @@
             "type": "dart",
             "flutterMode": "profile",
             "args": [
+                "--release",
                 "--flavor", "dev",
                 "--dart-define", "RAZORPAY_KEY=rzp_test_StsVgck8iNAA8a"
             ]

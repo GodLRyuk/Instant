@@ -49,6 +49,11 @@ android {
             signingConfig = signingConfigs.getByName("debug")
         }
     }
+    packaging {
+    jniLibs {
+        excludes += "**/libtoolChecker.so"
+    }
+}
 }
 
 flutter {
