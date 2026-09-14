@@ -8,7 +8,9 @@ class AuthInterceptor extends Interceptor {
 
   @override
   void onRequest(
-      RequestOptions options, RequestInterceptorHandler handler) async {
+    RequestOptions options,
+    RequestInterceptorHandler handler,
+  ) async {
     // ❌ Skip token for login & register
     if (options.path.contains('/customer-login') ||
         options.path.contains('/register')) {
@@ -29,6 +31,11 @@ class AuthInterceptor extends Interceptor {
   void onError(DioException err, ErrorInterceptorHandler handler) async {
     // If we get a 401 Unauthorized, try to refresh the token
     if (err.response?.statusCode == 401) {
+      final token = await _secureStorage.read('access_token');
+      if (token == null || token.isEmpty) {
+        return handler.next(err);
+      }
+
       // ❌ Don't try to refresh if the error itself came from a login or refresh attempt
       if (err.requestOptions.path.contains('/customer-login') ||
           err.requestOptions.path.contains('/token-refresh')) {
@@ -42,7 +49,7 @@ class AuthInterceptor extends Interceptor {
 
       if (newToken != null && newToken.isNotEmpty) {
         LogService.d("Refresh successful, retrying original request.");
-        
+
         // Update the header and retry the original request
         final options = err.requestOptions;
         options.headers['Authorization'] = 'Bearer $newToken';

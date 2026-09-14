@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:instant_delivery/controllers/cart_controller.dart';
+import 'package:instant_delivery/controllers/auth_controller.dart';
 import 'package:instant_delivery/controllers/category_controller.dart';
 import 'package:instant_delivery/controllers/product_controller.dart';
 import 'package:instant_delivery/controllers/wishlist_controller.dart';
@@ -36,6 +37,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
   RxDouble averageRating = 0.0.obs;
   RxInt reviewCount = 0.obs;
   final WishlistController wishlistController = Get.put(WishlistController());
+  final AuthController authController = AuthController.instance;
 
   // Tracks whether the "Add to Cart" API call is currently in flight,
   // so we can show a loading spinner and prevent duplicate taps.
@@ -168,6 +170,25 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
             ),
           );
         },
+      ),
+    );
+  }
+
+  void _showLoginRequired() {
+    Get.dialog(
+      AlertDialog(
+        title: const Text('Login required'),
+        content: const Text('You need to log in to purchase products.'),
+        actions: [
+          TextButton(onPressed: Get.back, child: const Text('Cancel')),
+          FilledButton(
+            onPressed: () {
+              Get.back();
+              Get.toNamed('/login');
+            },
+            child: const Text('Login'),
+          ),
+        ],
       ),
     );
   }
@@ -454,6 +475,11 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                               return;
                             }
 
+                            if (authController.isGuest.value) {
+                              _showLoginRequired();
+                              return;
+                            }
+
                             if (added) {
                               Get.to(() => CartPage());
                             } else {
@@ -527,6 +553,11 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                           onTap: outOfStock
                               ? null
                               : () async {
+                                  if (authController.isGuest.value) {
+                                    _showLoginRequired();
+                                    return;
+                                  }
+
                                   if (isLoading) {
                                     // already preparing — ignore extra taps
                                     return;

@@ -8,6 +8,7 @@ import 'package:instant_delivery/pages/splash/splash_screen.dart';
 import 'package:instant_delivery/services/notification_service.dart';
 import 'package:instant_delivery/services/security_service.dart';
 import 'package:instant_delivery/services/privacy_shield.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'route/app_routes.dart';
 import 'bindings/auth_binding.dart';
 
@@ -32,11 +33,16 @@ void main() async {
     debugPrint("WARNING: Device is rooted or in developer mode!");
   }
 
-  runApp(const MyApp());
+  final prefs = await SharedPreferences.getInstance();
+  final hasSeenOnboarding = prefs.getBool('has_seen_onboarding') ?? false;
+
+  runApp(MyApp(hasSeenOnboarding: hasSeenOnboarding));
 }
 
 class MyApp extends StatefulWidget {
-  const MyApp({super.key});
+  final bool hasSeenOnboarding;
+
+  const MyApp({super.key, required this.hasSeenOnboarding});
 
   @override
   State<MyApp> createState() => _MyAppState();
@@ -60,7 +66,9 @@ class _MyAppState extends State<MyApp> {
         title: 'Delivery App',
         debugShowCheckedModeBanner: false,
         initialBinding: AuthBinding(),
-        initialRoute: AppRoutes.loginPage,
+        initialRoute: widget.hasSeenOnboarding
+            ? AppRoutes.loginPage
+            : AppRoutes.onboardingPage,
         getPages: AppRoutes.routes,
       ),
     );

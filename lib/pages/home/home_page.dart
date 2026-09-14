@@ -52,6 +52,7 @@ class _HomePageState extends State<HomePage> {
     tag: "flash",
   );
   final WishlistController wishlistController = Get.put(WishlistController());
+  final BundleController bundleController = Get.put(BundleController());
 
   final List<String> _sectionTitleTemplates = const [
     "{category} temptations await",
@@ -76,6 +77,10 @@ class _HomePageState extends State<HomePage> {
 
     _midBannerController = PageController();
 
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _refreshData();
+    });
+
     _timer = Timer.periodic(const Duration(seconds: 3), (Timer timer) {
       if (_midBannerController.hasClients &&
           bannerController.bannerList.isNotEmpty) {
@@ -97,13 +102,10 @@ class _HomePageState extends State<HomePage> {
   void dispose() {
     _timer?.cancel();
     _midBannerController.dispose();
-    _refreshData();
     super.dispose();
   }
 
   Future<void> _refreshData() async {
-    final bundleController = Get.find<BundleController>();
-
     await Future.wait<void>([
       categoryController.fetchCategories(),
       productController.fetchProducts(),

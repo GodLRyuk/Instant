@@ -1,7 +1,4 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
-import 'package:instant_delivery/pages/auth/login_page.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -37,37 +34,7 @@ class _SplashScreenState extends State<SplashScreen>
       end: 0.75,
     ).animate(_fadeAnimation);
 
-    Future.delayed(const Duration(seconds: 60), () async {
-      if (!mounted) return;
-
-      await _controller.forward();
-      if (!mounted) return;
-
-      Navigator.of(context).pushReplacement(
-        PageRouteBuilder(
-          pageBuilder: (_, __, ___) => const LoginPage(),
-          transitionDuration: const Duration(milliseconds: 900),
-          reverseTransitionDuration: const Duration(milliseconds: 900),
-          transitionsBuilder: (_, animation, __, child) {
-            final curvedAnimation = CurvedAnimation(
-              parent: animation,
-              curve: Curves.easeInOut,
-            );
-
-            return FadeTransition(
-              opacity: curvedAnimation,
-              child: SlideTransition(
-                position: Tween<Offset>(
-                  begin: const Offset(0.0, 0.03),
-                  end: Offset.zero,
-                ).animate(curvedAnimation),
-                child: child,
-              ),
-            );
-          },
-        ),
-      );
-    });
+    _controller.forward();
   }
 
   @override

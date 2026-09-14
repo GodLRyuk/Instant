@@ -3,6 +3,7 @@ import 'package:get/get_core/src/get_main.dart';
 import 'package:get/get_navigation/src/extension_navigation.dart';
 import 'package:instant_delivery/pages/cart/cart_page.dart';
 import 'package:instant_delivery/pages/profile/profile_page.dart';
+import 'package:instant_delivery/controllers/auth_controller.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
@@ -26,6 +27,7 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
     final logoWidth = width * 0.26;
     final logoHeight = width < 360 ? 30.0 : 35.0;
     final avatarSize = width < 360 ? 34.0 : 40.0;
+    final isGuest = AuthController.instance.isGuest.value;
 
     return AppBar(
       elevation: 0,
@@ -47,6 +49,8 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
                 Get.back();
               },
             )
+          : isGuest
+          ? null
           : FutureBuilder<String?>(
               future: _getProfileImage(),
               builder: (context, snapshot) {
@@ -103,7 +107,7 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
 
       // ✅ ACTIONS
       actions: [
-        if (showCart)
+        if (showCart && !isGuest)
           IconButton(
             icon: Icon(
               Icons.shopping_cart,

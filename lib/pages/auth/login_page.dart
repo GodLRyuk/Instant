@@ -14,7 +14,7 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
-  final AuthController authController = Get.find<AuthController>();
+  final AuthController authController = AuthController.instance;
 
   final TextEditingController userNameController = TextEditingController();
 
@@ -155,6 +155,18 @@ class _LoginPageState extends State<LoginPage> {
                           ),
                         ),
                         SizedBox(height: 20),
+
+                        TextButton(
+                          onPressed: authController.continueAsGuest,
+                          child: Text(
+                            'Continue as Guest',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: screenWidth * 0.04,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
 
                         IconButton(
                           icon: const Icon(

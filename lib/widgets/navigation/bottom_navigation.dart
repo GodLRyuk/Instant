@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get_core/src/get_main.dart';
 import 'package:get/get_instance/src/extension_instance.dart';
+import 'package:get/get_navigation/src/extension_navigation.dart';
 import 'package:instant_delivery/controllers/order_controller.dart';
 import 'package:instant_delivery/controllers/wishlist_controller.dart';
 import 'package:instant_delivery/pages/cart/cart_page.dart';
@@ -11,8 +12,13 @@ import 'package:instant_delivery/pages/wishlist/wishlist_page.dart';
 
 class MainNavigation extends StatefulWidget {
   final int initialIndex;
+  final bool isGuest;
 
-  const MainNavigation({super.key, this.initialIndex = 0});
+  const MainNavigation({
+    super.key,
+    this.initialIndex = 0,
+    this.isGuest = false,
+  });
 
   @override
   _MainNavigationState createState() => _MainNavigationState();
@@ -20,26 +26,30 @@ class MainNavigation extends StatefulWidget {
 
 class _MainNavigationState extends State<MainNavigation> {
   late int _currentIndex;
-  final OrderController orderController = Get.put(OrderController());
-  final WishlistController wishlistController = Get.put(WishlistController());
-  final List<Widget> _pages = [
-    ProfilePage(),
-    OrderPage(),
-    HomePage(),
-    WishlistPage(),
-    CartPage(),
-  ];
+  OrderController? orderController;
+  late final List<Widget> _pages;
 
   @override
   void initState() {
     super.initState();
     _currentIndex = widget.initialIndex;
+    if (!widget.isGuest) {
+      _pages = [
+        ProfilePage(),
+        OrderPage(),
+        HomePage(),
+        WishlistPage(),
+        CartPage(),
+      ];
+      orderController = Get.put(OrderController());
+      Get.put(WishlistController());
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: _pages[_currentIndex],
+      body: widget.isGuest ? const HomePage() : _pages[_currentIndex],
       bottomNavigationBar: _buildBottomNav(),
     );
   }
@@ -77,12 +87,17 @@ class _MainNavigationState extends State<MainNavigation> {
 
     return GestureDetector(
       onTap: () {
+        if (widget.isGuest && index != 2) {
+          _showLoginRequired();
+          return;
+        }
+
         setState(() {
           _currentIndex = index;
         });
 
         if (index == 2) {
-          orderController.fetchOrders(); // 👈 trigger API
+          orderController?.fetchOrders();
         }
       },
       child: AnimatedContainer(
@@ -110,6 +125,29 @@ class _MainNavigationState extends State<MainNavigation> {
             ],
           ],
         ),
+      ),
+    );
+  }
+
+  void _showLoginRequired() {
+    showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Login required'),
+        content: const Text('Please log in to access this feature.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () {
+              Navigator.pop(context);
+              Get.toNamed('/login');
+            },
+            child: const Text('Login'),
+          ),
+        ],
       ),
     );
   }

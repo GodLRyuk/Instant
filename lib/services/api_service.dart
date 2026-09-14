@@ -29,6 +29,15 @@ class ApiService {
     _dio.interceptors.add(AuthInterceptor());
   }
 
+  List<dynamic> _listFromResponse(dynamic data) {
+    if (data is List) return data;
+    if (data is Map<String, dynamic>) {
+      final results = data['results'] ?? data['data'];
+      if (results is List) return results;
+    }
+    throw const FormatException('Expected a list response from the API');
+  }
+
   Future<Map<String, dynamic>> login(String email, String password) async {
     try {
       final response = await _dio.post(
@@ -171,7 +180,7 @@ class ApiService {
       final response = await _dio.get('/masters/categories/');
 
       if (response.statusCode == 200) {
-        List data = response.data;
+        final data = _listFromResponse(response.data);
         return data.map((e) => CategoryModel.fromJson(e)).toList();
       } else {
         throw Exception("Failed to load categories");
@@ -185,7 +194,7 @@ class ApiService {
     final response = await _dio.get("/products/");
 
     if (response.statusCode == 200) {
-      return response.data;
+      return _listFromResponse(response.data);
     } else {
       throw Exception("Failed to load products");
     }
@@ -195,7 +204,7 @@ class ApiService {
   Future<List<dynamic>> getNewArrivals() async {
     try {
       final response = await _dio.get('/products/new-arrivals/');
-      return response.data;
+      return _listFromResponse(response.data);
     } on DioException catch (e) {
       throw Exception(e.response?.data['message'] ?? "New arrivals error");
     }
@@ -205,7 +214,7 @@ class ApiService {
   Future<List<dynamic>> getRecommended() async {
     try {
       final response = await _dio.get('/products/recommended/');
-      return response.data;
+      return _listFromResponse(response.data);
     } on DioException catch (e) {
       throw Exception(e.response?.data['message'] ?? "Recommended API error");
     }
@@ -216,7 +225,7 @@ class ApiService {
       final response = await _dio.get(
         '/products/category/$categoryId/products/',
       );
-      return response.data;
+      return _listFromResponse(response.data);
     } on DioException catch (e) {
       throw Exception(e.response?.data['message'] ?? "Category API error");
     }
@@ -225,7 +234,7 @@ class ApiService {
   Future<List<dynamic>> getAdvBanner() async {
     try {
       final response = await _dio.get('/masters/banners/');
-      return response.data;
+      return _listFromResponse(response.data);
     } on DioException catch (e) {
       throw Exception(e.response?.data['message'] ?? "Banner API error");
     }
@@ -234,7 +243,7 @@ class ApiService {
   Future<List<dynamic>> getTopBanner() async {
     try {
       final response = await _dio.get('/masters/advbanners/');
-      return response.data;
+      return _listFromResponse(response.data);
     } on DioException catch (e) {
       throw Exception(e.response?.data['message'] ?? "Banner API error");
     }
@@ -343,7 +352,7 @@ class ApiService {
     final response = await _dio.get("/products/?search=$product");
 
     if (response.statusCode == 200) {
-      return response.data;
+      return _listFromResponse(response.data);
     } else {
       throw Exception("Failed to load products");
     }
@@ -444,7 +453,7 @@ class ApiService {
   Future<List<dynamic>> getBundles() async {
     try {
       final response = await _dio.get('/products/bundles/');
-      return response.data;
+      return _listFromResponse(response.data);
     } on DioException catch (e) {
       throw Exception(e.response?.data['message'] ?? "Bundles API error");
     }

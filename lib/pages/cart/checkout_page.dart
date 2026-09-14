@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:instant_delivery/controllers/address_controller.dart';
+import 'package:instant_delivery/controllers/auth_controller.dart';
 import 'package:instant_delivery/controllers/coupon_controller.dart';
 import 'package:instant_delivery/controllers/pass_controller.dart';
 import 'package:instant_delivery/pages/cart/payment_page.dart';
@@ -38,6 +39,7 @@ class CheckoutPage extends StatefulWidget {
 
 class _CheckoutPageState extends State<CheckoutPage> {
   final AddressController addressController = Get.put(AddressController());
+  final AuthController authController = AuthController.instance;
   final CouponController couponController = Get.put(CouponController());
   final PassController passController = Get.put(PassController()); // ← add
 
@@ -103,6 +105,8 @@ class _CheckoutPageState extends State<CheckoutPage> {
   @override
   void initState() {
     super.initState();
+    if (!authController.isLoggedIn.value) return;
+
     addressController.fetchAddresses().then((_) {
       if (addressController.selectedAddress.value != null) {
         _fetchDeliveryFee();
@@ -710,6 +714,11 @@ class _CheckoutPageState extends State<CheckoutPage> {
                     onPressed: isConfirmingOrder.value
                         ? null
                         : () async {
+                            if (!authController.isLoggedIn.value) {
+                              _showLoginRequired();
+                              return;
+                            }
+
                             if (addressController.selectedAddress.value ==
                                 null) {
                               Get.snackbar("Error", "Please select an address");
@@ -780,6 +789,25 @@ class _CheckoutPageState extends State<CheckoutPage> {
           ],
         );
       }),
+    );
+  }
+
+  void _showLoginRequired() {
+    Get.dialog(
+      AlertDialog(
+        title: const Text('Login required'),
+        content: const Text('You need to log in before confirming an order.'),
+        actions: [
+          TextButton(onPressed: Get.back, child: const Text('Cancel')),
+          FilledButton(
+            onPressed: () {
+              Get.back();
+              Get.toNamed('/login');
+            },
+            child: const Text('Login'),
+          ),
+        ],
+      ),
     );
   }
 

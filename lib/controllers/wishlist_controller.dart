@@ -1,6 +1,7 @@
 import 'package:get/get.dart';
 import 'package:instant_delivery/models/product_model.dart';
 import 'package:instant_delivery/services/api_service.dart';
+import 'package:instant_delivery/controllers/auth_controller.dart';
 
 class WishlistController extends GetxController {
   final RxList<ProductModel> items = <ProductModel>[].obs;
@@ -9,7 +10,9 @@ class WishlistController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    fetchWishlist(); // 👈 auto-load on app start
+    if (AuthController.instance.isLoggedIn.value) {
+      fetchWishlist();
+    }
   }
 
   static Future<List<ProductModel>> fetchWishlist() async {
@@ -24,6 +27,10 @@ class WishlistController extends GetxController {
   }
 
   Future<void> toggle(ProductModel product) async {
+    if (!AuthController.instance.isLoggedIn.value) {
+      return;
+    }
+
     if (isWishlisted(product.id)) {
       // Optimistic update — remove immediately, revert on failure
       items.removeWhere((p) => p.id == product.id);
