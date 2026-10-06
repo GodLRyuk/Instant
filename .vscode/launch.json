@@ -13,6 +13,17 @@
             ]
         },
         {
+            "name": "instant_delivery (prod)",
+            "request": "launch",
+            "type": "dart",
+            "args": [
+                "--release",
+                "--flavor", "prod",
+                "--dart-define", "RAZORPAY_KEY=rzp_test_StsVgck8iNAA8a",
+                "--dart-define", "APP_ENV=prod"
+            ]
+        },
+        {
             "name": "instant_delivery (profile mode)",
             "request": "launch",
             "type": "dart",
