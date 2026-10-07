@@ -38,6 +38,19 @@ class ApiService {
     throw const FormatException('Expected a list response from the API');
   }
 
+  String _errorMessage(DioException error, String fallback) {
+    final data = error.response?.data;
+    if (data is Map) {
+      final message = data['message'];
+      if (message != null && message.toString().isNotEmpty) {
+        return message.toString();
+      }
+    } else if (data is String && data.isNotEmpty) {
+      return data;
+    }
+    return fallback;
+  }
+
   Future<Map<String, dynamic>> login(String email, String password) async {
     try {
       final response = await _dio.post(
@@ -206,7 +219,7 @@ class ApiService {
       final response = await _dio.get('/products/new-arrivals/');
       return _listFromResponse(response.data);
     } on DioException catch (e) {
-      throw Exception(e.response?.data['message'] ?? "New arrivals error");
+      throw Exception(_errorMessage(e, "New arrivals error"));
     }
   }
 
@@ -216,7 +229,7 @@ class ApiService {
       final response = await _dio.get('/products/recommended/');
       return _listFromResponse(response.data);
     } on DioException catch (e) {
-      throw Exception(e.response?.data['message'] ?? "Recommended API error");
+      throw Exception(_errorMessage(e, "Recommended API error"));
     }
   }
 
@@ -481,11 +494,11 @@ class ApiService {
     try {
       final response = await _dio.get('/wishlist/');
       if (response.statusCode == 200) {
-        return response.data;
+        return _listFromResponse(response.data);
       }
       return [];
     } on DioException catch (e) {
-      throw Exception(e.response?.data['message'] ?? "Wishlist fetch error");
+      throw Exception(_errorMessage(e, "Wishlist fetch error"));
     }
   }
 

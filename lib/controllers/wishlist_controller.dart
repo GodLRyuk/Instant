@@ -11,7 +11,15 @@ class WishlistController extends GetxController {
   void onInit() {
     super.onInit();
     if (AuthController.instance.isLoggedIn.value) {
-      fetchWishlist();
+      _loadWishlist();
+    }
+  }
+
+  Future<void> _loadWishlist() async {
+    try {
+      items.assignAll(await fetchWishlist());
+    } catch (e) {
+      print("Wishlist Error: $e");
     }
   }
 
