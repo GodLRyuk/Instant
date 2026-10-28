@@ -56,16 +56,31 @@ class ApiService {
       final response = await _dio.post(
         '/accounts/customer-login/',
         data: LoginModel(email: email, password: password).toJson(),
-        options: Options(headers: {'Content-Type': 'application/json'}),
+        options: Options(
+          headers: {'Content-Type': 'application/json'},
+          connectTimeout: const Duration(seconds: 10),
+          receiveTimeout: const Duration(seconds: 10),
+          sendTimeout: const Duration(seconds: 10),
+        ),
       );
       if (response.data is Map<String, dynamic>) {
         final data = response.data;
+        final accessToken = data['access'];
+        final refreshToken = data['refresh'];
+        if (accessToken is! String ||
+            accessToken.isEmpty ||
+            refreshToken is! String ||
+            refreshToken.isEmpty) {
+          return {
+            'error': 'Login response did not include valid session tokens',
+          };
+        }
 
         final prefs = await SharedPreferences.getInstance();
 
         // ✅ Store tokens securely
-        await _secureStorage.write('access_token', data['access'] ?? '');
-        await _secureStorage.write('refresh_token', data['refresh'] ?? '');
+        await _secureStorage.write('access_token', accessToken);
+        await _secureStorage.write('refresh_token', refreshToken);
 
         // ✅ User info
         await prefs.setInt('user_id', data['user_id'] ?? 0);
@@ -578,24 +593,44 @@ class ApiService {
 
   /// Refreshes the access token using the stored refresh token.
   Future<String?> refreshToken() async {
-    try {
-      final refreshToken = await _secureStorage.read('refresh_token');
-      if (refreshToken == null || refreshToken.isEmpty) return null;
+    final refreshToken = await _secureStorage.read('refresh_token');
+    if (refreshToken == null || refreshToken.isEmpty) return null;
 
+    try {
       final response = await Dio().post(
-        '${AppConfig.baseUrl}/accounts/token-refresh/',
+        '${AppConfig.baseUrl}/token/refresh/',
         data: {'refresh': refreshToken},
+        options: Options(
+          connectTimeout: const Duration(seconds: 10),
+          receiveTimeout: const Duration(seconds: 10),
+          sendTimeout: const Duration(seconds: 10),
+        ),
       );
 
-      if (response.statusCode == 200) {
-        final String newAccess = response.data['access'];
+      final data = response.data;
+      final newAccess = data is Map ? data['access'] : null;
+      if (newAccess is String && newAccess.isNotEmpty) {
         await _secureStorage.write('access_token', newAccess);
+
+        final newRefresh = data['refresh'];
+        if (newRefresh is String && newRefresh.isNotEmpty) {
+          await _secureStorage.write('refresh_token', newRefresh);
+        }
         return newAccess;
       }
-    } catch (e) {
+
+      throw const FormatException(
+        'Token refresh response did not include an access token',
+      );
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 400 ||
+          e.response?.statusCode == 401 ||
+          e.response?.statusCode == 403) {
+        return null;
+      }
       LogService.e('Token refresh failed', error: e);
+      rethrow;
     }
-    return null;
   }
 
   Future<Map<String, dynamic>> submitReview({

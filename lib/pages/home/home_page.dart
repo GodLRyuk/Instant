@@ -3,9 +3,15 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:instant_delivery/controllers/bundle_controller.dart';
 import 'package:instant_delivery/controllers/category_controller.dart';
+import 'package:instant_delivery/controllers/address_controller.dart';
 import 'package:instant_delivery/controllers/product_controller.dart';
 import 'package:instant_delivery/controllers/wishlist_controller.dart';
+import 'package:instant_delivery/config/app_config.dart';
+import 'package:instant_delivery/models/restaurant_module.dart';
+import 'package:instant_delivery/restaurant/restaurant_pages.dart';
 import 'package:instant_delivery/pages/product/all_products.dart';
+import 'package:instant_delivery/services/api_service.dart';
+import 'package:instant_delivery/services/secure_storage.dart';
 import 'package:instant_delivery/widgets/cards/bundle_strip.dart';
 import 'package:instant_delivery/widgets/cards/category_card.dart';
 import 'package:instant_delivery/widgets/cards/product_card.dart';
@@ -51,8 +57,10 @@ class _HomePageState extends State<HomePage> {
     ProductController(),
     tag: "flash",
   );
+  final AddressController addressController = Get.put(AddressController());
   final WishlistController wishlistController = Get.put(WishlistController());
   final BundleController bundleController = Get.put(BundleController());
+  late final Future<void> _addressesLoaded;
 
   final List<String> _sectionTitleTemplates = const [
     "{category} temptations await",
@@ -74,6 +82,26 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
+
+    final storage = SecureStorage();
+    final api = ApiService();
+    RestaurantModule.init(
+      baseUrl: AppConfig.baseUrl,
+      tokenProvider: () => storage.read('access_token'),
+      currentAddress: () {
+        final address = addressController.selectedAddress.value;
+        if (address == null) return null;
+        return DeliveryAddress(
+          id: address.id,
+          label: address.isDefault ? 'Default address' : 'Saved address',
+          text: address.fullAddress,
+        );
+      },
+      pickAddress: _pickRestaurantAddress,
+      ensureAddressesLoaded: _ensureAddressesLoaded,
+      onUnauthorized: () async => await api.refreshToken() != null,
+    );
+    _addressesLoaded = addressController.fetchAddresses();
 
     _midBannerController = PageController();
 
@@ -116,6 +144,218 @@ class _HomePageState extends State<HomePage> {
       flashSaleController.fetchFlashSale(),
       bundleController.fetchBundles(),
     ]);
+  }
+
+  Future<void> _ensureAddressesLoaded() async {
+    await _addressesLoaded;
+    if (addressController.addressList.isEmpty) {
+      await addressController.fetchAddresses();
+    }
+  }
+
+  Future<DeliveryAddress?> _pickRestaurantAddress(BuildContext context) async {
+    await _ensureAddressesLoaded();
+    if (!context.mounted) return null;
+
+    return showModalBottomSheet<DeliveryAddress>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) => SafeArea(
+        child: Container(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.sizeOf(sheetContext).height * 0.7,
+          ),
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(top: 12, bottom: 18),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Row(
+                  children: [
+                    const Expanded(
+                      child: Text(
+                        'Choose delivery address',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      tooltip: 'Close',
+                      onPressed: () => Navigator.of(sheetContext).pop(),
+                      icon: const Icon(Icons.close),
+                    ),
+                  ],
+                ),
+              ),
+              const Padding(
+                padding: EdgeInsets.fromLTRB(20, 0, 20, 12),
+                child: Text(
+                  'Select where you would like this order delivered.',
+                  style: TextStyle(color: Colors.black54),
+                ),
+              ),
+              Flexible(
+                child: Obx(() {
+                  final addresses = addressController.addressList;
+                  if (addresses.isEmpty) {
+                    return const Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(24),
+                        child: Text('No saved delivery addresses were found.'),
+                      ),
+                    );
+                  }
+
+                  return ListView.separated(
+                    shrinkWrap: true,
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
+                    itemCount: addresses.length,
+                    separatorBuilder: (_, _) => const SizedBox(height: 8),
+                    itemBuilder: (context, index) {
+                      final address = addresses[index];
+                      final isSelected =
+                          addressController.selectedAddress.value?.id ==
+                          address.id;
+                      final cityLine = [
+                        address.city,
+                        address.state,
+                        address.pincode,
+                      ].where((part) => part.trim().isNotEmpty).join(', ');
+                      final deliveryAddress = DeliveryAddress(
+                        id: address.id,
+                        label: address.isDefault
+                            ? 'Default address'
+                            : 'Saved address',
+                        text: address.fullAddress,
+                      );
+
+                      return Material(
+                        color: isSelected
+                            ? const Color(0xFFEAF6EE)
+                            : Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(16),
+                          onTap: () {
+                            addressController.selectAddress(address);
+                            Navigator.of(sheetContext).pop(deliveryAddress);
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.all(14),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: isSelected
+                                    ? Colors.green
+                                    : Colors.grey.shade300,
+                                width: isSelected ? 1.5 : 1,
+                              ),
+                            ),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Icon(
+                                  address.isDefault
+                                      ? Icons.home_outlined
+                                      : Icons.location_on_outlined,
+                                  color: isSelected
+                                      ? Colors.green
+                                      : Colors.black54,
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: Text(
+                                              deliveryAddress.label,
+                                              style: const TextStyle(
+                                                fontWeight: FontWeight.w700,
+                                              ),
+                                            ),
+                                          ),
+                                          if (address.isDefault)
+                                            Container(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 8,
+                                                    vertical: 4,
+                                                  ),
+                                              decoration: BoxDecoration(
+                                                color: const Color(0xFFEAF6EE),
+                                                borderRadius:
+                                                    BorderRadius.circular(20),
+                                              ),
+                                              child: const Text(
+                                                'DEFAULT',
+                                                style: TextStyle(
+                                                  color: Colors.green,
+                                                  fontSize: 10,
+                                                  fontWeight: FontWeight.w800,
+                                                ),
+                                              ),
+                                            ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 5),
+                                      Text(address.fullAddress),
+                                      if (cityLine.isNotEmpty) ...[
+                                        const SizedBox(height: 3),
+                                        Text(
+                                          cityLine,
+                                          style: const TextStyle(
+                                            color: Colors.black54,
+                                            fontSize: 12,
+                                          ),
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                ),
+                                if (isSelected) ...[
+                                  const SizedBox(width: 8),
+                                  const Icon(
+                                    Icons.check_circle,
+                                    color: Colors.green,
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  );
+                }),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   // 🔥 Icon Mapper
@@ -286,40 +526,9 @@ class _HomePageState extends State<HomePage> {
                   );
                 }),
               ),
-              // 🔥 Banner
-              Obx(() {
-                if (topBannerController.isLoading.value) {
-                  return SizedBox(
-                    height: height * 0.2,
-                    child: Center(child: CircularProgressIndicator()),
-                  );
-                }
 
-                // Guard against empty list
-                if (topBannerController.topbannerList.isEmpty) {
-                  return SizedBox(
-                    height: height * 0.2,
-                  ); // or a placeholder widget
-                }
-
-                final banner = topBannerController.topbannerList[0];
-
-                return Container(
-                  margin: EdgeInsets.symmetric(horizontal: width * 0.04),
-                  height: height * 0.2,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(width * 0.04),
-                    image: DecorationImage(
-                      image: NetworkImage(banner.image),
-                      fit: BoxFit.fill,
-                    ),
-                  ),
-                );
-              }),
+              const RestaurantHomeSection(),
               SizedBox(height: height * 0.015),
-
-              FlashSaleStrip(controller: flashSaleController),
-
               // 🔥 Products Title
               SectionHeader(
                 title: 'New Arrival',
@@ -364,6 +573,39 @@ class _HomePageState extends State<HomePage> {
                 }),
               ),
               SizedBox(height: height * 0.015),
+              // 🔥 Banner
+              Obx(() {
+                if (topBannerController.isLoading.value) {
+                  return SizedBox(
+                    height: height * 0.2,
+                    child: Center(child: CircularProgressIndicator()),
+                  );
+                }
+
+                // Guard against empty list
+                if (topBannerController.topbannerList.isEmpty) {
+                  return SizedBox(
+                    height: height * 0.2,
+                  ); // or a placeholder widget
+                }
+
+                final banner = topBannerController.topbannerList[0];
+
+                return Container(
+                  margin: EdgeInsets.symmetric(horizontal: width * 0.04),
+                  height: height * 0.2,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(width * 0.04),
+                    image: DecorationImage(
+                      image: NetworkImage(banner.image),
+                      fit: BoxFit.fill,
+                    ),
+                  ),
+                );
+              }),
+              SizedBox(height: height * 0.015),
+
+              FlashSaleStrip(controller: flashSaleController),
 
               const BundleStrip(),
 
