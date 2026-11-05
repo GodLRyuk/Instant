@@ -8,10 +8,13 @@ class BundleController extends GetxController {
   final ApiService _apiService = ApiService();
   var bundleList = <BundleModel>[].obs;
   var isLoading = false.obs;
+  final bool loadOnInit;
+
+  BundleController({this.loadOnInit = true});
 
   @override
   void onInit() {
-    fetchBundles();
+    if (loadOnInit) fetchBundles();
     super.onInit();
   }
 

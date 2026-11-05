@@ -5,7 +5,6 @@
 list(APPEND FLUTTER_PLUGIN_LIST
   awesome_notifications
   file_selector_windows
-  firebase_auth
   firebase_core
   flutter_secure_storage_windows
   geolocator_windows

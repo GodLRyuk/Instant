@@ -7,10 +7,13 @@ class CategoryController extends GetxController {
   var isLoading = false.obs;
 
   final ApiService _apiService = ApiService();
+  final bool loadOnInit;
+
+  CategoryController({this.loadOnInit = true});
 
   @override
   void onInit() {
-    fetchCategories();
+    if (loadOnInit) fetchCategories();
     super.onInit();
   }
 

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:instant_delivery/controllers/product_controller.dart';
@@ -199,10 +200,14 @@ class _FlashSaleStripState extends State<FlashSaleStrip> {
                                       top: Radius.circular(14),
                                     ),
                                   ),
-                                  child: Image.network(
-                                    product.image,
+                                  child: CachedNetworkImage(
+                                    imageUrl: product.image,
                                     fit: BoxFit.contain,
-                                    errorBuilder: (_, _, _) => Icon(
+                                    placeholder: (_, _) => Icon(
+                                      Icons.image,
+                                      color: Colors.grey[300],
+                                    ),
+                                    errorWidget: (_, _, _) => Icon(
                                       Icons.image_not_supported,
                                       color: Colors.grey[300],
                                     ),

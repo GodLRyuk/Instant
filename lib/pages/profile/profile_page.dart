@@ -10,6 +10,7 @@ import 'package:instant_delivery/pages/orders/order_detail_page.dart';
 import 'package:instant_delivery/pages/orders/order_list_page.dart';
 import 'package:instant_delivery/pages/profile/edit_profile_page.dart';
 import 'package:instant_delivery/widgets/navigation/custom_app_bar.dart';
+import 'package:instant_delivery/widgets/skeleton_loader.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ProfilePage extends StatefulWidget {
@@ -222,7 +223,13 @@ class _ProfilePageState extends State<ProfilePage> {
                     if (addressController.isLoading.value) {
                       return const Padding(
                         padding: EdgeInsets.all(10),
-                        child: CircularProgressIndicator(),
+                        child: Column(
+                          children: [
+                            SkeletonBox(height: 48, radius: 10),
+                            SizedBox(height: 10),
+                            SkeletonBox(height: 48, radius: 10),
+                          ],
+                        ),
                       );
                     }
 

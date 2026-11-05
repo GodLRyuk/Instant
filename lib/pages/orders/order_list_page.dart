@@ -4,6 +4,7 @@ import 'package:instant_delivery/controllers/order_controller.dart';
 import 'package:instant_delivery/pages/orders/order_detail_page.dart';
 import 'package:instant_delivery/restaurant/restaurant_orders_page.dart';
 import 'package:instant_delivery/widgets/navigation/custom_app_bar.dart';
+import 'package:instant_delivery/widgets/skeleton_loader.dart';
 
 class OrderPage extends StatelessWidget {
   OrderPage({super.key});
@@ -67,7 +68,7 @@ class OrderPage extends StatelessWidget {
 
   Widget _groceryOrders() => Obx(() {
     if (controller.isLoading.value && controller.orderList.isEmpty) {
-      return const Center(child: CircularProgressIndicator());
+      return const OrderListSkeleton();
     }
 
     if (controller.orderList.isEmpty) {

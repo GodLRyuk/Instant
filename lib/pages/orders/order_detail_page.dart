@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:instant_delivery/controllers/orderDetails_controller.dart';
 import 'package:instant_delivery/widgets/branding/branding.dart';
 import 'package:instant_delivery/widgets/navigation/custom_app_bar.dart';
+import 'package:instant_delivery/widgets/skeleton_loader.dart';
 import 'package:intl/intl.dart';
 
 class OrderDetailPage extends StatefulWidget {
@@ -48,9 +49,7 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
       ),
       body: Obx(() {
         if (controller.isLoading.value) {
-          return const Center(
-            child: CircularProgressIndicator(color: Color(0xFF3CB549)),
-          );
+          return const OrderDetailSkeleton();
         }
 
         final order = controller.orderDetail;

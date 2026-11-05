@@ -13,6 +13,7 @@ import 'package:instant_delivery/widgets/branding/branding.dart';
 import 'package:instant_delivery/widgets/cards/category_card.dart';
 import 'package:instant_delivery/widgets/cards/product_card.dart';
 import 'package:instant_delivery/widgets/navigation/custom_app_bar.dart';
+import 'package:instant_delivery/widgets/skeleton_loader.dart';
 
 class ProductDetailsPage extends StatefulWidget {
   final dynamic product;
@@ -248,7 +249,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
       backgroundColor: Colors.grey[100],
       body: Obx(() {
         if (currentProduct.value == null) {
-          return const Center(child: CircularProgressIndicator());
+          return const OrderDetailSkeleton();
         }
 
         final product = currentProduct.value;
@@ -660,7 +661,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                   padding: EdgeInsets.symmetric(horizontal: width * 0.04),
                   child: Obx(() {
                     if (recommendedController.isLoading.value) {
-                      return const Center(child: CircularProgressIndicator());
+                      return const ProductGridSkeleton();
                     }
                     final recommended = recommendedController.recommendedList;
                     final displayCount = recommended.length > 6
@@ -700,7 +701,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                   padding: EdgeInsets.symmetric(horizontal: width * 0.04),
                   child: Obx(() {
                     if (newArrivalController.isLoading.value) {
-                      return const Center(child: CircularProgressIndicator());
+                      return const ProductGridSkeleton();
                     }
                     final newArrivals = newArrivalController.newArrivalList;
                     final displayCount = newArrivals.length > 6

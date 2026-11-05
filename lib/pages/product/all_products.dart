@@ -6,6 +6,7 @@ import 'package:instant_delivery/models/product_model.dart';
 import 'package:instant_delivery/pages/product/product_details_page.dart';
 import 'package:instant_delivery/widgets/branding/branding.dart';
 import 'package:instant_delivery/widgets/navigation/custom_app_bar.dart';
+import 'package:instant_delivery/widgets/skeleton_loader.dart';
 
 // ── Design tokens ─────────────────────────────────────────────────
 const _kPrimary = Color(0xFF1DB954); // vivid green
@@ -196,8 +197,9 @@ class _AllProductsPageState extends State<AllProductsPage> {
       ),
       body: Obx(() {
         if (productController.isLoading.value) {
-          return const Center(
-            child: CircularProgressIndicator(color: _kPrimary),
+          return const Padding(
+            padding: EdgeInsets.all(16),
+            child: ProductGridSkeleton(),
           );
         }
         return CustomScrollView(

@@ -4,6 +4,7 @@ import '../models/restaurant_models.dart';
 import '../models/restaurant_module.dart';
 import '../services/restaurant_api.dart';
 import '../widgets/restaurant_widgets.dart';
+import '../widgets/skeleton_loader.dart';
 
 class RestaurantOrdersPage extends StatefulWidget {
   const RestaurantOrdersPage({super.key, this.showHeader = true});
@@ -64,7 +65,7 @@ class _RestaurantOrdersPageState extends State<RestaurantOrdersPage> {
             const RestaurantHeader(title: 'Restaurant orders'),
           Expanded(
             child: _loading && _orders.isEmpty
-                ? const Center(child: CircularProgressIndicator())
+                ? const OrderListSkeleton()
                 : _error != null && _orders.isEmpty
                 ? _OrdersError(message: _error!, onRetry: _loadOrders)
                 : RefreshIndicator(

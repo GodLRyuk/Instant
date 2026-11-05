@@ -1,5 +1,6 @@
 // ── Compact product card used inside curated category sections ──────
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:get/get_core/src/get_main.dart';
 import 'package:get/get_navigation/src/extension_navigation.dart';
 import 'package:get/get_navigation/src/routes/transitions_type.dart';
@@ -63,10 +64,12 @@ class PromoProductCard extends StatelessWidget {
                         top: Radius.circular(14),
                       ),
                     ),
-                    child: Image.network(
-                      product.image,
+                    child: CachedNetworkImage(
+                      imageUrl: product.image,
                       fit: BoxFit.contain,
-                      errorBuilder: (_, _, _) => Icon(
+                      placeholder: (_, _) =>
+                          Icon(Icons.image, color: Colors.grey[300]),
+                      errorWidget: (_, _, _) => Icon(
                         Icons.image_not_supported,
                         color: Colors.grey[300],
                       ),

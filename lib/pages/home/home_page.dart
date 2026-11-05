@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:instant_delivery/controllers/bundle_controller.dart';
@@ -17,6 +18,7 @@ import 'package:instant_delivery/widgets/cards/category_card.dart';
 import 'package:instant_delivery/widgets/cards/product_card.dart';
 import 'package:instant_delivery/widgets/cards/flash_sale_strip.dart';
 import 'package:instant_delivery/widgets/navigation/custom_app_bar.dart';
+import 'package:instant_delivery/widgets/skeleton_loader.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -26,27 +28,33 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  final CategoryController categoryController = Get.put(CategoryController());
+  final CategoryController categoryController = Get.put(
+    CategoryController(loadOnInit: false),
+  );
 
   final ProductController productController = Get.put(
-    ProductController(),
+    ProductController(loadOnInit: false),
     tag: "all",
   );
   final ProductController newArrivalController = Get.put(
-    ProductController(),
+    ProductController(loadOnInit: false),
     tag: "new",
   );
   final ProductController recommendedController = Get.put(
-    ProductController(),
+    ProductController(loadOnInit: false),
     tag: "rec",
   );
   final ProductController searchControllerX = Get.put(
-    ProductController(),
+    ProductController(loadOnInit: false),
     tag: "search",
   );
   late PageController _midBannerController;
-  final ProductController bannerController = Get.put(ProductController());
-  final ProductController topBannerController = Get.put(ProductController());
+  final ProductController bannerController = Get.put(
+    ProductController(loadOnInit: false),
+  );
+  final ProductController topBannerController = Get.put(
+    ProductController(loadOnInit: false),
+  );
   final TextEditingController searchController = TextEditingController();
   final RxList searchResults = [].obs;
   final RxBool showSearchBox = false.obs;
@@ -54,13 +62,16 @@ class _HomePageState extends State<HomePage> {
   Timer? _timer;
 
   final ProductController flashSaleController = Get.put(
-    ProductController(),
+    ProductController(loadOnInit: false),
     tag: "flash",
   );
   final AddressController addressController = Get.put(AddressController());
   final WishlistController wishlistController = Get.put(WishlistController());
-  final BundleController bundleController = Get.put(BundleController());
+  final BundleController bundleController = Get.put(
+    BundleController(loadOnInit: false),
+  );
   late final Future<void> _addressesLoaded;
+  final ScrollController _homeScrollController = ScrollController();
 
   final List<String> _sectionTitleTemplates = const [
     "{category} temptations await",
@@ -104,6 +115,7 @@ class _HomePageState extends State<HomePage> {
     _addressesLoaded = addressController.fetchAddresses();
 
     _midBannerController = PageController();
+    _homeScrollController.addListener(_handleHomeScroll);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _refreshData();
@@ -130,7 +142,19 @@ class _HomePageState extends State<HomePage> {
   void dispose() {
     _timer?.cancel();
     _midBannerController.dispose();
+    _homeScrollController
+      ..removeListener(_handleHomeScroll)
+      ..dispose();
     super.dispose();
+  }
+
+  void _handleHomeScroll() {
+    if (!_homeScrollController.hasClients ||
+        _homeScrollController.position.extentAfter > 500 ||
+        productController.isLoading.value) {
+      return;
+    }
+    productController.loadMoreProducts();
   }
 
   Future<void> _refreshData() async {
@@ -392,6 +416,7 @@ class _HomePageState extends State<HomePage> {
       body: RefreshIndicator(
         onRefresh: _refreshData,
         child: SingleChildScrollView(
+          controller: _homeScrollController,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -465,7 +490,15 @@ class _HomePageState extends State<HomePage> {
                 height: height * 0.10,
                 child: Obx(() {
                   if (categoryController.isLoading.value) {
-                    return const Center(child: CircularProgressIndicator());
+                    return ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: 6,
+                      separatorBuilder: (_, _) => const SizedBox(width: 10),
+                      itemBuilder: (_, _) => const Column(children: [
+                        SkeletonBox(width: 58, height: 58, radius: 29),
+                        SizedBox(height: 6), SkeletonBox(width: 58, height: 10),
+                      ]),
+                    );
                   }
 
                   return ListView.builder(
@@ -497,18 +530,21 @@ class _HomePageState extends State<HomePage> {
                               CircleAvatar(
                                 radius: width * 0.06,
                                 backgroundColor: Colors.green.shade50,
-                                child: Image.network(
-                                  category.image ?? '',
+                                child: CachedNetworkImage(
+                                  imageUrl: category.image ?? '',
                                   width: width * 0.08,
                                   height: width * 0.1,
                                   fit: BoxFit.contain,
-                                  errorBuilder: (context, error, stackTrace) {
-                                    return Icon(
-                                      Icons.category,
-                                      color: Colors.grey[400],
-                                      size: width * 0.07,
-                                    );
-                                  },
+                                  placeholder: (context, url) => Icon(
+                                    Icons.category,
+                                    color: Colors.grey[300],
+                                    size: width * 0.07,
+                                  ),
+                                  errorWidget: (context, url, error) => Icon(
+                                    Icons.category,
+                                    color: Colors.grey[400],
+                                    size: width * 0.07,
+                                  ),
                                 ),
                               ),
                               // SizedBox(height: height * 0.008),
@@ -542,7 +578,7 @@ class _HomePageState extends State<HomePage> {
                 padding: EdgeInsets.symmetric(horizontal: width * 0.04),
                 child: Obx(() {
                   if (newArrivalController.isLoading.value) {
-                    return const Center(child: CircularProgressIndicator());
+                    return const ProductGridSkeleton();
                   }
                   final newArrival = newArrivalController.newArrivalList;
                   final displayCount = newArrival.length > 6
@@ -578,7 +614,7 @@ class _HomePageState extends State<HomePage> {
                 if (topBannerController.isLoading.value) {
                   return SizedBox(
                     height: height * 0.2,
-                    child: Center(child: CircularProgressIndicator()),
+                    child: const SkeletonBox(height: 180, radius: 12),
                   );
                 }
 
@@ -596,9 +632,18 @@ class _HomePageState extends State<HomePage> {
                   height: height * 0.2,
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(width * 0.04),
-                    image: DecorationImage(
-                      image: NetworkImage(banner.image),
-                      fit: BoxFit.fill,
+                  ),
+                  clipBehavior: Clip.antiAlias,
+                  child: CachedNetworkImage(
+                    imageUrl: banner.image,
+                    fit: BoxFit.cover,
+                    placeholder: (context, url) => Container(
+                      color: Colors.grey.shade200,
+                      child: const SkeletonBox(),
+                    ),
+                    errorWidget: (context, url, error) => Container(
+                      color: Colors.grey.shade200,
+                      child: const Icon(Icons.image_not_supported),
                     ),
                   ),
                 );
@@ -623,7 +668,7 @@ class _HomePageState extends State<HomePage> {
                   padding: EdgeInsets.symmetric(horizontal: width * 0.04),
                   child: Obx(() {
                     if (recommendedController.isLoading.value) {
-                      return const Center(child: CircularProgressIndicator());
+                      return const ProductGridSkeleton();
                     }
                     final recommended = recommendedController.recommendedList;
                     final displayCount = recommended.length > 6
@@ -654,7 +699,7 @@ class _HomePageState extends State<HomePage> {
                 if (bannerController.isLoading.value) {
                   return SizedBox(
                     height: height * 0.18,
-                    child: const Center(child: CircularProgressIndicator()),
+                    child: const SkeletonBox(height: 160, radius: 12),
                   );
                 }
 
@@ -678,26 +723,18 @@ class _HomePageState extends State<HomePage> {
                         ),
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(width * 0.04),
-                          child: Image.network(
-                            banner.image,
+                          child: CachedNetworkImage(
+                            imageUrl: banner.image,
                             fit: BoxFit.fill,
-                            errorBuilder: (context, error, stackTrace) {
-                              return Center(
-                                child: Icon(Icons.error, color: Colors.red),
-                              );
-                            },
-                            loadingBuilder: (context, child, loadingProgress) {
-                              if (loadingProgress == null) return child;
-                              return Center(
-                                child: CircularProgressIndicator(
-                                  value:
-                                      loadingProgress.expectedTotalBytes != null
-                                      ? loadingProgress.cumulativeBytesLoaded /
-                                            loadingProgress.expectedTotalBytes!
-                                      : null,
-                                ),
-                              );
-                            },
+                            placeholder: (context, url) => const Center(
+                              child: const SkeletonBox(),
+                            ),
+                            errorWidget: (context, url, error) => const Center(
+                              child: Icon(
+                                Icons.image_not_supported,
+                                color: Colors.grey,
+                              ),
+                            ),
                           ),
                         ),
                       );
@@ -722,7 +759,7 @@ class _HomePageState extends State<HomePage> {
                   // ── 3-column grid ─────────────────────────────
                   Obx(() {
                     if (productController.isLoading.value) {
-                      return const Center(child: CircularProgressIndicator());
+                      return const ProductGridSkeleton();
                     }
 
                     final products = productController.productList;
@@ -779,6 +816,15 @@ class _HomePageState extends State<HomePage> {
                   ],
                 );
               }),
+
+              Obx(
+                () => productController.isMoreLoading.value
+                    ? const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 20),
+                        child: Center(child: CircularProgressIndicator()),
+                      )
+                    : const SizedBox(height: 20),
+              ),
 
               // SizedBox(height: height * 0.05),
               // AppFooterBranding(),

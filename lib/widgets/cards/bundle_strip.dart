@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:instant_delivery/config/app_config.dart';
 import 'package:instant_delivery/pages/cart/cart_page.dart';
 import '../../controllers/bundle_controller.dart';
@@ -145,10 +146,15 @@ class _BundleCard extends StatelessWidget {
                     ),
                   ),
                   child: resolvedImageUrl.isNotEmpty
-                      ? Image.network(
-                          resolvedImageUrl,
+                      ? CachedNetworkImage(
+                          imageUrl: resolvedImageUrl,
                           fit: BoxFit.contain,
-                          errorBuilder: (_, error, _) {
+                          placeholder: (_, _) => Icon(
+                            Icons.card_giftcard,
+                            color: Colors.grey[300],
+                            size: 36,
+                          ),
+                          errorWidget: (_, _, error) {
                             // Surfaces the real cause in debug console
                             // instead of silently showing a placeholder.
                             debugPrint(
