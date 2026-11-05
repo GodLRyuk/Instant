@@ -1,11 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:instant_delivery/controllers/auth_controller.dart';
 import 'package:instant_delivery/models/registration_model.dart';
 import 'package:instant_delivery/pages/auth/otp_page.dart';
 import 'package:instant_delivery/services/api_service.dart';
 import 'package:instant_delivery/widgets/buttons/custom_button.dart';
-import 'package:google_sign_in/google_sign_in.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -27,10 +24,6 @@ class _RegisterPageState extends State<RegisterPage> {
 
   String selectedRole = 'CUSTOMER';
   bool isLoading = false;
-  bool _isGoogleLoading = false;
-  String _registrationMethod = 'email';
-  final GoogleSignIn _googleSignIn = GoogleSignIn.instance;
-  bool _googleSignInInitialized = false;
   final Map<String, String> _fieldErrors = {};
   @override
   void dispose() {
@@ -76,42 +69,6 @@ class _RegisterPageState extends State<RegisterPage> {
                   ),
                 ),
                 SizedBox(height: screenHeight * 0.04),
-                Text(
-                  'Choose a registration method',
-                  style: TextStyle(color: Colors.white.withValues(alpha: 0.9)),
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _methodButton(
-                        label: 'Email',
-                        selected: _registrationMethod == 'email',
-                        onTap: () =>
-                            setState(() => _registrationMethod = 'email'),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: _methodButton(
-                        label: _isGoogleLoading ? 'Connecting…' : 'Google',
-                        selected: _registrationMethod == 'google',
-                        onTap: _isGoogleLoading
-                            ? null
-                            : _startGoogleRegistration,
-                      ),
-                    ),
-                  ],
-                ),
-                if (_registrationMethod == 'google') ...[
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Continue with Google to create or access your customer account.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: Colors.white, fontSize: 12),
-                  ),
-                ],
-                const SizedBox(height: 16),
                 buildTextField("First Name", first_nameController),
                 buildTextField("Last Name", last_nameController),
                 buildTextField("Username", usernameController),
@@ -218,84 +175,6 @@ class _RegisterPageState extends State<RegisterPage> {
         ),
       ),
     );
-  }
-
-  Widget _methodButton({
-    required String label,
-    required bool selected,
-    required VoidCallback? onTap,
-  }) {
-    return OutlinedButton(
-      onPressed: onTap,
-      style: OutlinedButton.styleFrom(
-        backgroundColor: selected ? Colors.white : Colors.transparent,
-        foregroundColor: selected ? Colors.black : Colors.white,
-        side: const BorderSide(color: Colors.white),
-        padding: const EdgeInsets.symmetric(vertical: 12),
-      ),
-      child: Text(label),
-    );
-  }
-
-  Future<void> _startGoogleRegistration() async {
-    setState(() => _isGoogleLoading = true);
-    try {
-      if (!_googleSignInInitialized) {
-        final serverClientId = dotenv.env['GOOGLE_SERVER_CLIENT_ID']?.trim();
-        if (serverClientId == null || serverClientId.isEmpty) {
-          throw StateError(
-            'Google sign-in is not configured. Add the Web OAuth client ID '
-            'as GOOGLE_SERVER_CLIENT_ID in .env.',
-          );
-        }
-        await _googleSignIn.initialize(serverClientId: serverClientId);
-        _googleSignInInitialized = true;
-      }
-      final account = await _googleSignIn.authenticate();
-      final idToken = account.authentication.idToken;
-      if (idToken == null || idToken.isEmpty) {
-        throw StateError(
-          'Google did not return an ID token. Check your Google OAuth client IDs.',
-        );
-      }
-      final nameParts = (account.displayName ?? '').trim().split(
-        RegExp(r'\s+'),
-      );
-      if (nameParts.isNotEmpty && nameParts.first.isNotEmpty) {
-        first_nameController.text = nameParts.first;
-        last_nameController.text = nameParts.length > 1
-            ? nameParts.skip(1).join(' ')
-            : '';
-      }
-      emailController.text = account.email;
-      final suggestedUsername = account.email
-          .split('@')
-          .first
-          .replaceAll(RegExp(r'[^A-Za-z0-9_]'), '');
-      if (usernameController.text.isEmpty) {
-        usernameController.text = suggestedUsername;
-      }
-      setState(() {
-        _registrationMethod = 'google';
-        _fieldErrors.remove('First Name');
-        _fieldErrors.remove('Last Name');
-        _fieldErrors.remove('Email');
-        _fieldErrors.remove('Username');
-      });
-      await AuthController.instance.loginWithGoogleIdToken(idToken);
-    } catch (e) {
-      if (e is GoogleSignInException &&
-          e.code == GoogleSignInExceptionCode.canceled) {
-        return;
-      }
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Google sign-in failed: $e')));
-      }
-    } finally {
-      if (mounted) setState(() => _isGoogleLoading = false);
-    }
   }
 
   Widget buildTextField(

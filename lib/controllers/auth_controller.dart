@@ -50,23 +50,6 @@ class AuthController extends GetxController {
     Get.offAll(() => MainNavigation(initialIndex: 2));
   }
 
-  Future<void> loginWithGoogleIdToken(String idToken) async {
-    isLoading.value = true;
-    final result = await _apiService.loginWithGoogle(idToken);
-    isLoading.value = false;
-    if (result.containsKey('error')) {
-      Get.snackbar(
-        'Google Sign-In Failed',
-        result['error'].toString(),
-        snackPosition: SnackPosition.BOTTOM,
-      );
-      return;
-    }
-    isLoggedIn.value = true;
-    isGuest.value = false;
-    Get.offAll(() => MainNavigation(initialIndex: 2));
-  }
-
   Future<void> continueAsGuest() async {
     await _secureStorage.delete('access_token');
     await _secureStorage.delete('refresh_token');
