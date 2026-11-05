@@ -5,11 +5,13 @@ import 'package:instant_delivery/pages/auth/register_page.dart';
 import '../pages/auth/login_page.dart';
 import '../pages/onboarding/onboarding_page.dart';
 import '../pages/home/home_page.dart';
+import '../widgets/navigation/bottom_navigation.dart';
 
 class AppRoutes {
   static const onboardingPage = '/onboarding';
   static const loginPage = '/login';
   static const homePage = '/home';
+  static const dashboardPage = '/dashboard';
   static const registerPage = '/register';
 
   static final routes = [
@@ -20,6 +22,11 @@ class AppRoutes {
       name: homePage,
       page: () => HomePage(),
       middlewares: [AuthMiddleware()], // 👈 now protected
+    ),
+    GetPage(
+      name: dashboardPage,
+      page: () => const MainNavigation(initialIndex: 2),
+      middlewares: [AuthMiddleware()],
     ),
   ];
 }

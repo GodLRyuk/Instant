@@ -38,33 +38,45 @@ class ApiService {
     throw const FormatException('Expected a list response from the API');
   }
 
+  String _errorMessage(DioException error, String fallback) {
+    final data = error.response?.data;
+    if (data is Map) {
+      final message = data['message'] ?? data['error'] ?? data['detail'];
+      if (message != null && message.toString().isNotEmpty) {
+        return message.toString();
+      }
+    } else if (data is String && data.isNotEmpty) {
+      return data;
+    }
+    return fallback;
+  }
+
   Future<Map<String, dynamic>> login(String email, String password) async {
     try {
       final response = await _dio.post(
         '/accounts/customer-login/',
         data: LoginModel(email: email, password: password).toJson(),
-        options: Options(headers: {'Content-Type': 'application/json'}),
+        options: Options(
+          headers: {'Content-Type': 'application/json'},
+          connectTimeout: const Duration(seconds: 10),
+          receiveTimeout: const Duration(seconds: 10),
+          sendTimeout: const Duration(seconds: 10),
+        ),
       );
       if (response.data is Map<String, dynamic>) {
         final data = response.data;
-
-        final prefs = await SharedPreferences.getInstance();
-
-        // ✅ Store tokens securely
-        await _secureStorage.write('access_token', data['access'] ?? '');
-        await _secureStorage.write('refresh_token', data['refresh'] ?? '');
-
-        // ✅ User info
-        await prefs.setInt('user_id', data['user_id'] ?? 0);
-        await prefs.setString('email', data['email'] ?? '');
-        await prefs.setString('phone', data['phone'] ?? '');
-        await prefs.setString('role', data['role'] ?? '');
-        await prefs.setString('profile_image', data['profile_image'] ?? '');
-
-        final fcmToken = prefs.getString('fcm_token');
-        if (fcmToken != null && fcmToken.isNotEmpty) {
-          await saveDeviceToken(fcmToken);
+        final accessToken = data['access'];
+        final refreshToken = data['refresh'];
+        if (accessToken is! String ||
+            accessToken.isEmpty ||
+            refreshToken is! String ||
+            refreshToken.isEmpty) {
+          return {
+            'error': 'Login response did not include valid session tokens',
+          };
         }
+
+        await _persistSession(data);
 
         return data;
       } else {
@@ -84,6 +96,57 @@ class ApiService {
     } catch (e) {
       LogService.e('Unexpected login error', error: e);
       return {'error': 'Unexpected error: $e'};
+    }
+  }
+
+  /// Exchanges a Google ID token with the Django API and persists its session.
+  /// The API must verify the token and return the same session fields as login.
+  Future<Map<String, dynamic>> loginWithGoogle(String idToken) async {
+    try {
+      final response = await _dio.post(
+        '/accounts/google-auth/',
+        data: {'id_token': idToken},
+        options: Options(headers: {'Content-Type': 'application/json'}),
+      );
+      if (response.data is! Map<String, dynamic>) {
+        return {'error': 'Google authentication returned an invalid response'};
+      }
+      final data = Map<String, dynamic>.from(response.data);
+      final accessToken = data['access'];
+      final refreshToken = data['refresh'];
+      if (accessToken is! String ||
+          accessToken.isEmpty ||
+          refreshToken is! String ||
+          refreshToken.isEmpty) {
+        return {'error': 'Google authentication did not return session tokens'};
+      }
+      await _persistSession(data);
+      return data;
+    } on DioException catch (e) {
+      LogService.e('Google authentication error', error: e);
+      return {'error': _errorMessage(e, 'Google authentication failed')};
+    } catch (e) {
+      LogService.e('Unexpected Google authentication error', error: e);
+      return {'error': 'Google authentication failed: $e'};
+    }
+  }
+
+  Future<void> _persistSession(Map<String, dynamic> data) async {
+    final prefs = await SharedPreferences.getInstance();
+    await _secureStorage.write('access_token', data['access'] as String);
+    await _secureStorage.write('refresh_token', data['refresh'] as String);
+    await prefs.setInt('user_id', (data['user_id'] as num?)?.toInt() ?? 0);
+    await prefs.setString('email', data['email']?.toString() ?? '');
+    await prefs.setString('phone', data['phone']?.toString() ?? '');
+    await prefs.setString('role', data['role']?.toString() ?? '');
+    await prefs.setString(
+      'profile_image',
+      data['profile_image']?.toString() ?? '',
+    );
+
+    final fcmToken = prefs.getString('fcm_token');
+    if (fcmToken != null && fcmToken.isNotEmpty) {
+      await saveDeviceToken(fcmToken);
     }
   }
 
@@ -190,14 +253,24 @@ class ApiService {
     }
   }
 
-  Future<List<dynamic>> getProducts({int page = 1}) async {
-    final response = await _dio.get("/products/");
+  Future<({List<dynamic> products, bool hasMore})> getProducts({
+    int page = 1,
+  }) async {
+    final response = await _dio.get(
+      "/products/",
+      queryParameters: page > 1 ? {'page': page} : null,
+    );
 
-    if (response.statusCode == 200) {
-      return _listFromResponse(response.data);
-    } else {
+    if (response.statusCode != 200) {
       throw Exception("Failed to load products");
     }
+
+    return (
+      products: _listFromResponse(response.data),
+      hasMore:
+          response.data is Map<String, dynamic> &&
+          response.data['next'] != null,
+    );
   }
 
   // ================= NEW ARRIVALS =================
@@ -206,7 +279,7 @@ class ApiService {
       final response = await _dio.get('/products/new-arrivals/');
       return _listFromResponse(response.data);
     } on DioException catch (e) {
-      throw Exception(e.response?.data['message'] ?? "New arrivals error");
+      throw Exception(_errorMessage(e, "New arrivals error"));
     }
   }
 
@@ -216,7 +289,7 @@ class ApiService {
       final response = await _dio.get('/products/recommended/');
       return _listFromResponse(response.data);
     } on DioException catch (e) {
-      throw Exception(e.response?.data['message'] ?? "Recommended API error");
+      throw Exception(_errorMessage(e, "Recommended API error"));
     }
   }
 
@@ -481,11 +554,11 @@ class ApiService {
     try {
       final response = await _dio.get('/wishlist/');
       if (response.statusCode == 200) {
-        return response.data;
+        return _listFromResponse(response.data);
       }
       return [];
     } on DioException catch (e) {
-      throw Exception(e.response?.data['message'] ?? "Wishlist fetch error");
+      throw Exception(_errorMessage(e, "Wishlist fetch error"));
     }
   }
 
@@ -565,24 +638,44 @@ class ApiService {
 
   /// Refreshes the access token using the stored refresh token.
   Future<String?> refreshToken() async {
-    try {
-      final refreshToken = await _secureStorage.read('refresh_token');
-      if (refreshToken == null || refreshToken.isEmpty) return null;
+    final refreshToken = await _secureStorage.read('refresh_token');
+    if (refreshToken == null || refreshToken.isEmpty) return null;
 
+    try {
       final response = await Dio().post(
-        '${AppConfig.baseUrl}/accounts/token-refresh/',
+        '${AppConfig.baseUrl}/token/refresh/',
         data: {'refresh': refreshToken},
+        options: Options(
+          connectTimeout: const Duration(seconds: 10),
+          receiveTimeout: const Duration(seconds: 10),
+          sendTimeout: const Duration(seconds: 10),
+        ),
       );
 
-      if (response.statusCode == 200) {
-        final String newAccess = response.data['access'];
+      final data = response.data;
+      final newAccess = data is Map ? data['access'] : null;
+      if (newAccess is String && newAccess.isNotEmpty) {
         await _secureStorage.write('access_token', newAccess);
+
+        final newRefresh = data['refresh'];
+        if (newRefresh is String && newRefresh.isNotEmpty) {
+          await _secureStorage.write('refresh_token', newRefresh);
+        }
         return newAccess;
       }
-    } catch (e) {
+
+      throw const FormatException(
+        'Token refresh response did not include an access token',
+      );
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 400 ||
+          e.response?.statusCode == 401 ||
+          e.response?.statusCode == 403) {
+        return null;
+      }
       LogService.e('Token refresh failed', error: e);
+      rethrow;
     }
-    return null;
   }
 
   Future<Map<String, dynamic>> submitReview({

@@ -10,7 +10,8 @@ class PrivacyShield extends StatefulWidget {
   State<PrivacyShield> createState() => _PrivacyShieldState();
 }
 
-class _PrivacyShieldState extends State<PrivacyShield> with WidgetsBindingObserver {
+class _PrivacyShieldState extends State<PrivacyShield>
+    with WidgetsBindingObserver {
   bool _isBackgrounded = false;
 
   @override
@@ -31,8 +32,9 @@ class _PrivacyShieldState extends State<PrivacyShield> with WidgetsBindingObserv
 
     setState(() {
       // Inactive or Paused means the user is switching apps or has minimized it
-      _isBackgrounded = (state == AppLifecycleState.inactive || 
-                         state == AppLifecycleState.paused);
+      _isBackgrounded =
+          (state == AppLifecycleState.inactive ||
+          state == AppLifecycleState.paused);
     });
   }
 
@@ -41,6 +43,7 @@ class _PrivacyShieldState extends State<PrivacyShield> with WidgetsBindingObserv
     if (!_isBackgrounded) return widget.child;
 
     return Stack(
+      alignment: Alignment.topLeft,
       children: [
         widget.child,
         // Overlay a blur and a logo when in background

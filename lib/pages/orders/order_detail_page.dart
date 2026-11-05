@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:instant_delivery/controllers/orderDetails_controller.dart';
 import 'package:instant_delivery/widgets/branding/branding.dart';
 import 'package:instant_delivery/widgets/navigation/custom_app_bar.dart';
+import 'package:instant_delivery/widgets/skeleton_loader.dart';
 import 'package:intl/intl.dart';
 
 class OrderDetailPage extends StatefulWidget {
@@ -48,9 +49,7 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
       ),
       body: Obx(() {
         if (controller.isLoading.value) {
-          return const Center(
-            child: CircularProgressIndicator(color: Color(0xFF3CB549)),
-          );
+          return const OrderDetailSkeleton();
         }
 
         final order = controller.orderDetail;
@@ -68,6 +67,7 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
             .toUpperCase();
         final isScheduled = deliveryType == 'SCHEDULED';
         final isCancelled = status == 'CANCELLED';
+        final deliveryOtp = order['delivery_otp']?.toString().trim();
 
         return SingleChildScrollView(
           padding: const EdgeInsets.all(16),
@@ -135,6 +135,11 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
 
               const SizedBox(height: 20),
 
+              // if (deliveryOtp != null && deliveryOtp.isNotEmpty) ...[
+              _buildDeliveryOtpCard(deliveryOtp!),
+              const SizedBox(height: 20),
+              // ],
+
               // ── SCHEDULED INFO (if applicable) ───────────────
               if (isScheduled) _buildScheduledCard(order),
 
@@ -193,6 +198,48 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
               fontWeight: FontWeight.w600,
               color: isScheduled ? Colors.blue.shade700 : Colors.green.shade700,
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDeliveryOtpCard(String otp) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.amber.shade50,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.amber.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.lock_outline, color: Colors.amber.shade800, size: 18),
+              const SizedBox(width: 8),
+              const Text(
+                "Delivery OTP",
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            otp,
+            style: TextStyle(
+              color: Colors.amber.shade900,
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 4,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            "Share this code with your delivery partner to confirm delivery.",
+            style: TextStyle(color: Colors.grey.shade700, fontSize: 12),
           ),
         ],
       ),

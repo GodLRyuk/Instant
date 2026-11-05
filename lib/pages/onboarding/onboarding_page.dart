@@ -76,31 +76,31 @@ class _OnboardingPageState extends State<OnboardingPage> {
       child: Scaffold(
         backgroundColor: backgroundColor,
         extendBody: true,
-        body: SafeArea(
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              PageView.builder(
-                controller: _pageController,
-                itemCount: _slides.length,
-                onPageChanged: (page) => setState(() => _currentPage = page),
-                itemBuilder: (context, index) {
-                  final slide = _slides[index];
-                  return ColoredBox(
-                    color: const Color(0xFFF5F8E8),
-                    child: Align(
-                      alignment: Alignment.topCenter,
-                      child: Image.asset(
-                        slide.image,
-                        // width: double.infinity,
-                        fit: BoxFit.fill,
-                        height: double.infinity,
-                      ),
+        body: Stack(
+          fit: StackFit.expand,
+          children: [
+            PageView.builder(
+              controller: _pageController,
+              itemCount: _slides.length,
+              onPageChanged: (page) => setState(() => _currentPage = page),
+              itemBuilder: (context, index) {
+                final slide = _slides[index];
+                return ColoredBox(
+                  color: const Color(0xFFF5F8E8),
+                  child: Align(
+                    alignment: Alignment.topCenter,
+                    child: Image.asset(
+                      slide.image,
+                      width: double.infinity,
+                      fit: BoxFit.fill,
+                      height: double.infinity,
                     ),
-                  );
-                },
-              ),
-              Padding(
+                  ),
+                );
+              },
+            ),
+            SafeArea(
+              child: Padding(
                 padding: const EdgeInsets.fromLTRB(24, 18, 24, 24),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
@@ -160,8 +160,8 @@ class _OnboardingPageState extends State<OnboardingPage> {
                   ],
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

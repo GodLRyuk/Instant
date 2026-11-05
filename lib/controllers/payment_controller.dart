@@ -203,7 +203,6 @@ class PaymentController extends GetxController {
       response.message ?? "Something went wrong",
       snackPosition: SnackPosition.TOP,
     );
-    Get.back();
   }
 
   void _handleWallet(ExternalWalletResponse response) {

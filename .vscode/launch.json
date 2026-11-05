@@ -5,19 +5,19 @@
             "name": "instant_delivery (dev)",
             "request": "launch",
             "type": "dart",
+            "flutterMode": "debug",
             "args": [
-                "--release",
                 "--flavor", "dev",
                 "--dart-define", "RAZORPAY_KEY=rzp_test_StsVgck8iNAA8a",
                 "--dart-define", "APP_ENV=dev"
             ]
         },
         {
-            "name": "instant_delivery (prod)",
+            "name": "instant_delivery (prod, debug + DevTools)",
             "request": "launch",
             "type": "dart",
+            "flutterMode": "debug",
             "args": [
-                "--release",
                 "--flavor", "prod",
                 "--dart-define", "RAZORPAY_KEY=rzp_test_StsVgck8iNAA8a",
                 "--dart-define", "APP_ENV=prod"
@@ -29,14 +29,13 @@
             "type": "dart",
             "flutterMode": "profile",
             "args": [
-                "--release",
                 "--flavor", "dev",
                 "--dart-define", "RAZORPAY_KEY=rzp_test_StsVgck8iNAA8a",
                 "--dart-define", "APP_ENV=dev"
             ]
         },
         {
-            "name": "instant_delivery (release mode)",
+            "name": "instant_delivery (release mode, NO DevTools)",
             "request": "launch",
             "type": "dart",
             "flutterMode": "release",

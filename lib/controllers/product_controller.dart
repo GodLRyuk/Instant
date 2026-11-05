@@ -1,9 +1,16 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../models/product_model.dart';
 import '../services/api_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ProductController extends GetxController {
+  static const _productsCacheKey = 'home_products_page_1';
+  static const _bannersCacheKey = 'home_banners';
+  static const _topBannersCacheKey = 'home_top_banners';
+
   final ApiService _apiService = ApiService();
 
   var productList = <ProductModel>[].obs;
@@ -24,7 +31,8 @@ class ProductController extends GetxController {
   int currentPage = 1;
   bool hasMore = true;
   final String? tagName;
-  ProductController({this.tagName});
+  final bool loadOnInit;
+  ProductController({this.tagName, this.loadOnInit = true});
 
   /// 🔥 Scroll Controller
   final ScrollController scrollController = ScrollController();
@@ -37,12 +45,14 @@ class ProductController extends GetxController {
 
   @override
   void onInit() {
-    fetchProducts();
-    fetchNewArrivals();
-    fetchRecommended();
-    fetchBanners();
-    fetchTopBanners();
-    fetchFlashSale();
+    if (loadOnInit) {
+      fetchProducts();
+      fetchNewArrivals();
+      fetchRecommended();
+      fetchBanners();
+      fetchTopBanners();
+      fetchFlashSale();
+    }
     scrollController.addListener(_scrollListener);
     super.onInit();
   }
@@ -58,17 +68,59 @@ class ProductController extends GetxController {
 
   Future<void> fetchProducts() async {
     try {
-      isLoading(true);
+      if (productList.isEmpty) {
+        try {
+          await _loadCachedProducts();
+        } catch (error, stackTrace) {
+          debugPrint("Ignoring invalid cached products: $error");
+          debugPrintStack(stackTrace: stackTrace);
+        }
+      }
+      if (productList.isEmpty) isLoading(true);
 
       final response = await _apiService.getProducts();
-      productList.value = response
+      productList.value = response.products
           .map<ProductModel>((e) => ProductModel.fromJson(e))
           .toList();
+      currentPage = 1;
+      hasMore = response.hasMore;
+      await _saveCachedProducts(response.products, response.hasMore);
     } catch (e) {
-      print("Product Error: $e");
+      debugPrint("Product Error: $e");
     } finally {
       isLoading(false);
     }
+  }
+
+  Future<void> _loadCachedProducts() async {
+    final preferences = await SharedPreferences.getInstance();
+    final cachedData = preferences.getString(_productsCacheKey);
+    if (cachedData == null) return;
+
+    final decoded = jsonDecode(cachedData);
+    if (decoded is! Map<String, dynamic> || decoded['products'] is! List) {
+      throw const FormatException('Invalid cached products response');
+    }
+
+    productList.assignAll(
+      (decoded['products'] as List)
+          .map<ProductModel>(
+            (item) => ProductModel.fromJson(item as Map<String, dynamic>),
+          )
+          .toList(),
+    );
+    hasMore = decoded['hasMore'] == true;
+  }
+
+  Future<void> _saveCachedProducts(
+    List<dynamic> products,
+    bool hasMoreProducts,
+  ) async {
+    final preferences = await SharedPreferences.getInstance();
+    await preferences.setString(
+      _productsCacheKey,
+      jsonEncode({'products': products, 'hasMore': hasMoreProducts}),
+    );
   }
 
   Future<void> fetchNewArrivals() async {
@@ -110,6 +162,8 @@ class ProductController extends GetxController {
       productList.value = response
           .map((e) => ProductModel.fromJson(e))
           .toList();
+      currentPage = 1;
+      hasMore = false;
     } finally {
       isLoading(false);
     }
@@ -141,15 +195,20 @@ class ProductController extends GetxController {
 
   Future<void> fetchBanners() async {
     try {
-      isLoading(true);
+      if (bannerList.isEmpty) {
+        await _restoreCachedBannerList(_bannersCacheKey, bannerList);
+      }
+      if (bannerList.isEmpty) isLoading(true);
 
       final response = await _apiService.getAdvBanner();
 
       bannerList.value = response
           .map<ProductModel>((e) => ProductModel.fromJson(e))
           .toList();
-    } catch (e) {
-      print("New Arrival Error: $e");
+      await _saveCachedBannerList(_bannersCacheKey, response);
+    } catch (error, stackTrace) {
+      debugPrint("Banner Error: $error");
+      debugPrintStack(stackTrace: stackTrace);
     } finally {
       isLoading(false);
     }
@@ -157,37 +216,79 @@ class ProductController extends GetxController {
 
   Future<void> fetchTopBanners() async {
     try {
-      isLoading(true);
+      if (topbannerList.isEmpty) {
+        await _restoreCachedBannerList(_topBannersCacheKey, topbannerList);
+      }
+      if (topbannerList.isEmpty) isLoading(true);
 
       final response = await _apiService.getTopBanner();
 
       topbannerList.value = response
           .map<ProductModel>((e) => ProductModel.fromJson(e))
           .toList();
-    } catch (e) {
-      print("New Arrival Error: $e");
+      await _saveCachedBannerList(_topBannersCacheKey, response);
+    } catch (error, stackTrace) {
+      debugPrint("Top banner error: $error");
+      debugPrintStack(stackTrace: stackTrace);
     } finally {
       isLoading(false);
     }
   }
 
+  Future<void> _restoreCachedBannerList(
+    String cacheKey,
+    RxList<ProductModel> target,
+  ) async {
+    try {
+      final preferences = await SharedPreferences.getInstance();
+      final cachedData = preferences.getString(cacheKey);
+      if (cachedData == null) return;
+
+      final decoded = jsonDecode(cachedData);
+      if (decoded is! List) {
+        throw const FormatException('Invalid cached banner response');
+      }
+
+      target.assignAll(
+        decoded
+            .map<ProductModel>(
+              (item) => ProductModel.fromJson(item as Map<String, dynamic>),
+            )
+            .toList(),
+      );
+    } catch (error, stackTrace) {
+      debugPrint("Unable to restore cached banners: $error");
+      debugPrintStack(stackTrace: stackTrace);
+    }
+  }
+
+  Future<void> _saveCachedBannerList(
+    String cacheKey,
+    List<dynamic> banners,
+  ) async {
+    final preferences = await SharedPreferences.getInstance();
+    await preferences.setString(cacheKey, jsonEncode(banners));
+  }
+
   Future<void> loadMoreProducts() async {
+    if (isMoreLoading.value || !hasMore) return;
+
     try {
       isMoreLoading(true);
 
-      currentPage++;
-
-      final response = await _apiService.getProducts(page: currentPage);
-
-      if (response.isNotEmpty) {
+      final nextPage = currentPage + 1;
+      final response = await _apiService.getProducts(page: nextPage);
+      if (response.products.isNotEmpty) {
         productList.addAll(
-          response.map<ProductModel>((e) => ProductModel.fromJson(e)).toList(),
+          response.products
+              .map<ProductModel>((e) => ProductModel.fromJson(e))
+              .toList(),
         );
-      } else {
-        hasMore = false;
       }
+      currentPage = nextPage;
+      hasMore = response.hasMore;
     } catch (e) {
-      print("Load More Error: $e");
+      debugPrint("Load More Error: $e");
     } finally {
       isMoreLoading(false);
     }

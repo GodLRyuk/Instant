@@ -1,16 +1,24 @@
 import 'dart:async';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:instant_delivery/controllers/bundle_controller.dart';
 import 'package:instant_delivery/controllers/category_controller.dart';
+import 'package:instant_delivery/controllers/address_controller.dart';
 import 'package:instant_delivery/controllers/product_controller.dart';
 import 'package:instant_delivery/controllers/wishlist_controller.dart';
+import 'package:instant_delivery/config/app_config.dart';
+import 'package:instant_delivery/models/restaurant_module.dart';
+import 'package:instant_delivery/restaurant/restaurant_pages.dart';
 import 'package:instant_delivery/pages/product/all_products.dart';
+import 'package:instant_delivery/services/api_service.dart';
+import 'package:instant_delivery/services/secure_storage.dart';
 import 'package:instant_delivery/widgets/cards/bundle_strip.dart';
 import 'package:instant_delivery/widgets/cards/category_card.dart';
 import 'package:instant_delivery/widgets/cards/product_card.dart';
 import 'package:instant_delivery/widgets/cards/flash_sale_strip.dart';
 import 'package:instant_delivery/widgets/navigation/custom_app_bar.dart';
+import 'package:instant_delivery/widgets/skeleton_loader.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -20,27 +28,33 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  final CategoryController categoryController = Get.put(CategoryController());
+  final CategoryController categoryController = Get.put(
+    CategoryController(loadOnInit: false),
+  );
 
   final ProductController productController = Get.put(
-    ProductController(),
+    ProductController(loadOnInit: false),
     tag: "all",
   );
   final ProductController newArrivalController = Get.put(
-    ProductController(),
+    ProductController(loadOnInit: false),
     tag: "new",
   );
   final ProductController recommendedController = Get.put(
-    ProductController(),
+    ProductController(loadOnInit: false),
     tag: "rec",
   );
   final ProductController searchControllerX = Get.put(
-    ProductController(),
+    ProductController(loadOnInit: false),
     tag: "search",
   );
   late PageController _midBannerController;
-  final ProductController bannerController = Get.put(ProductController());
-  final ProductController topBannerController = Get.put(ProductController());
+  final ProductController bannerController = Get.put(
+    ProductController(loadOnInit: false),
+  );
+  final ProductController topBannerController = Get.put(
+    ProductController(loadOnInit: false),
+  );
   final TextEditingController searchController = TextEditingController();
   final RxList searchResults = [].obs;
   final RxBool showSearchBox = false.obs;
@@ -48,11 +62,16 @@ class _HomePageState extends State<HomePage> {
   Timer? _timer;
 
   final ProductController flashSaleController = Get.put(
-    ProductController(),
+    ProductController(loadOnInit: false),
     tag: "flash",
   );
+  final AddressController addressController = Get.put(AddressController());
   final WishlistController wishlistController = Get.put(WishlistController());
-  final BundleController bundleController = Get.put(BundleController());
+  final BundleController bundleController = Get.put(
+    BundleController(loadOnInit: false),
+  );
+  late final Future<void> _addressesLoaded;
+  final ScrollController _homeScrollController = ScrollController();
 
   final List<String> _sectionTitleTemplates = const [
     "{category} temptations await",
@@ -75,7 +94,28 @@ class _HomePageState extends State<HomePage> {
   void initState() {
     super.initState();
 
+    final storage = SecureStorage();
+    final api = ApiService();
+    RestaurantModule.init(
+      baseUrl: AppConfig.baseUrl,
+      tokenProvider: () => storage.read('access_token'),
+      currentAddress: () {
+        final address = addressController.selectedAddress.value;
+        if (address == null) return null;
+        return DeliveryAddress(
+          id: address.id,
+          label: address.isDefault ? 'Default address' : 'Saved address',
+          text: address.fullAddress,
+        );
+      },
+      pickAddress: _pickRestaurantAddress,
+      ensureAddressesLoaded: _ensureAddressesLoaded,
+      onUnauthorized: () async => await api.refreshToken() != null,
+    );
+    _addressesLoaded = addressController.fetchAddresses();
+
     _midBannerController = PageController();
+    _homeScrollController.addListener(_handleHomeScroll);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _refreshData();
@@ -102,7 +142,19 @@ class _HomePageState extends State<HomePage> {
   void dispose() {
     _timer?.cancel();
     _midBannerController.dispose();
+    _homeScrollController
+      ..removeListener(_handleHomeScroll)
+      ..dispose();
     super.dispose();
+  }
+
+  void _handleHomeScroll() {
+    if (!_homeScrollController.hasClients ||
+        _homeScrollController.position.extentAfter > 500 ||
+        productController.isLoading.value) {
+      return;
+    }
+    productController.loadMoreProducts();
   }
 
   Future<void> _refreshData() async {
@@ -116,6 +168,218 @@ class _HomePageState extends State<HomePage> {
       flashSaleController.fetchFlashSale(),
       bundleController.fetchBundles(),
     ]);
+  }
+
+  Future<void> _ensureAddressesLoaded() async {
+    await _addressesLoaded;
+    if (addressController.addressList.isEmpty) {
+      await addressController.fetchAddresses();
+    }
+  }
+
+  Future<DeliveryAddress?> _pickRestaurantAddress(BuildContext context) async {
+    await _ensureAddressesLoaded();
+    if (!context.mounted) return null;
+
+    return showModalBottomSheet<DeliveryAddress>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) => SafeArea(
+        child: Container(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.sizeOf(sheetContext).height * 0.7,
+          ),
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(top: 12, bottom: 18),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Row(
+                  children: [
+                    const Expanded(
+                      child: Text(
+                        'Choose delivery address',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      tooltip: 'Close',
+                      onPressed: () => Navigator.of(sheetContext).pop(),
+                      icon: const Icon(Icons.close),
+                    ),
+                  ],
+                ),
+              ),
+              const Padding(
+                padding: EdgeInsets.fromLTRB(20, 0, 20, 12),
+                child: Text(
+                  'Select where you would like this order delivered.',
+                  style: TextStyle(color: Colors.black54),
+                ),
+              ),
+              Flexible(
+                child: Obx(() {
+                  final addresses = addressController.addressList;
+                  if (addresses.isEmpty) {
+                    return const Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(24),
+                        child: Text('No saved delivery addresses were found.'),
+                      ),
+                    );
+                  }
+
+                  return ListView.separated(
+                    shrinkWrap: true,
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
+                    itemCount: addresses.length,
+                    separatorBuilder: (_, _) => const SizedBox(height: 8),
+                    itemBuilder: (context, index) {
+                      final address = addresses[index];
+                      final isSelected =
+                          addressController.selectedAddress.value?.id ==
+                          address.id;
+                      final cityLine = [
+                        address.city,
+                        address.state,
+                        address.pincode,
+                      ].where((part) => part.trim().isNotEmpty).join(', ');
+                      final deliveryAddress = DeliveryAddress(
+                        id: address.id,
+                        label: address.isDefault
+                            ? 'Default address'
+                            : 'Saved address',
+                        text: address.fullAddress,
+                      );
+
+                      return Material(
+                        color: isSelected
+                            ? const Color(0xFFEAF6EE)
+                            : Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(16),
+                          onTap: () {
+                            addressController.selectAddress(address);
+                            Navigator.of(sheetContext).pop(deliveryAddress);
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.all(14),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: isSelected
+                                    ? Colors.green
+                                    : Colors.grey.shade300,
+                                width: isSelected ? 1.5 : 1,
+                              ),
+                            ),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Icon(
+                                  address.isDefault
+                                      ? Icons.home_outlined
+                                      : Icons.location_on_outlined,
+                                  color: isSelected
+                                      ? Colors.green
+                                      : Colors.black54,
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: Text(
+                                              deliveryAddress.label,
+                                              style: const TextStyle(
+                                                fontWeight: FontWeight.w700,
+                                              ),
+                                            ),
+                                          ),
+                                          if (address.isDefault)
+                                            Container(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 8,
+                                                    vertical: 4,
+                                                  ),
+                                              decoration: BoxDecoration(
+                                                color: const Color(0xFFEAF6EE),
+                                                borderRadius:
+                                                    BorderRadius.circular(20),
+                                              ),
+                                              child: const Text(
+                                                'DEFAULT',
+                                                style: TextStyle(
+                                                  color: Colors.green,
+                                                  fontSize: 10,
+                                                  fontWeight: FontWeight.w800,
+                                                ),
+                                              ),
+                                            ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 5),
+                                      Text(address.fullAddress),
+                                      if (cityLine.isNotEmpty) ...[
+                                        const SizedBox(height: 3),
+                                        Text(
+                                          cityLine,
+                                          style: const TextStyle(
+                                            color: Colors.black54,
+                                            fontSize: 12,
+                                          ),
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                ),
+                                if (isSelected) ...[
+                                  const SizedBox(width: 8),
+                                  const Icon(
+                                    Icons.check_circle,
+                                    color: Colors.green,
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  );
+                }),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   // 🔥 Icon Mapper
@@ -152,6 +416,7 @@ class _HomePageState extends State<HomePage> {
       body: RefreshIndicator(
         onRefresh: _refreshData,
         child: SingleChildScrollView(
+          controller: _homeScrollController,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -225,7 +490,15 @@ class _HomePageState extends State<HomePage> {
                 height: height * 0.10,
                 child: Obx(() {
                   if (categoryController.isLoading.value) {
-                    return const Center(child: CircularProgressIndicator());
+                    return ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: 6,
+                      separatorBuilder: (_, _) => const SizedBox(width: 10),
+                      itemBuilder: (_, _) => const Column(children: [
+                        SkeletonBox(width: 58, height: 58, radius: 29),
+                        SizedBox(height: 6), SkeletonBox(width: 58, height: 10),
+                      ]),
+                    );
                   }
 
                   return ListView.builder(
@@ -257,18 +530,21 @@ class _HomePageState extends State<HomePage> {
                               CircleAvatar(
                                 radius: width * 0.06,
                                 backgroundColor: Colors.green.shade50,
-                                child: Image.network(
-                                  category.image ?? '',
+                                child: CachedNetworkImage(
+                                  imageUrl: category.image ?? '',
                                   width: width * 0.08,
                                   height: width * 0.1,
                                   fit: BoxFit.contain,
-                                  errorBuilder: (context, error, stackTrace) {
-                                    return Icon(
-                                      Icons.category,
-                                      color: Colors.grey[400],
-                                      size: width * 0.07,
-                                    );
-                                  },
+                                  placeholder: (context, url) => Icon(
+                                    Icons.category,
+                                    color: Colors.grey[300],
+                                    size: width * 0.07,
+                                  ),
+                                  errorWidget: (context, url, error) => Icon(
+                                    Icons.category,
+                                    color: Colors.grey[400],
+                                    size: width * 0.07,
+                                  ),
                                 ),
                               ),
                               // SizedBox(height: height * 0.008),
@@ -286,40 +562,9 @@ class _HomePageState extends State<HomePage> {
                   );
                 }),
               ),
-              // 🔥 Banner
-              Obx(() {
-                if (topBannerController.isLoading.value) {
-                  return SizedBox(
-                    height: height * 0.2,
-                    child: Center(child: CircularProgressIndicator()),
-                  );
-                }
 
-                // Guard against empty list
-                if (topBannerController.topbannerList.isEmpty) {
-                  return SizedBox(
-                    height: height * 0.2,
-                  ); // or a placeholder widget
-                }
-
-                final banner = topBannerController.topbannerList[0];
-
-                return Container(
-                  margin: EdgeInsets.symmetric(horizontal: width * 0.04),
-                  height: height * 0.2,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(width * 0.04),
-                    image: DecorationImage(
-                      image: NetworkImage(banner.image),
-                      fit: BoxFit.fill,
-                    ),
-                  ),
-                );
-              }),
+              const RestaurantHomeSection(),
               SizedBox(height: height * 0.015),
-
-              FlashSaleStrip(controller: flashSaleController),
-
               // 🔥 Products Title
               SectionHeader(
                 title: 'New Arrival',
@@ -333,7 +578,7 @@ class _HomePageState extends State<HomePage> {
                 padding: EdgeInsets.symmetric(horizontal: width * 0.04),
                 child: Obx(() {
                   if (newArrivalController.isLoading.value) {
-                    return const Center(child: CircularProgressIndicator());
+                    return const ProductGridSkeleton();
                   }
                   final newArrival = newArrivalController.newArrivalList;
                   final displayCount = newArrival.length > 6
@@ -364,6 +609,48 @@ class _HomePageState extends State<HomePage> {
                 }),
               ),
               SizedBox(height: height * 0.015),
+              // 🔥 Banner
+              Obx(() {
+                if (topBannerController.isLoading.value) {
+                  return SizedBox(
+                    height: height * 0.2,
+                    child: const SkeletonBox(height: 180, radius: 12),
+                  );
+                }
+
+                // Guard against empty list
+                if (topBannerController.topbannerList.isEmpty) {
+                  return SizedBox(
+                    height: height * 0.2,
+                  ); // or a placeholder widget
+                }
+
+                final banner = topBannerController.topbannerList[0];
+
+                return Container(
+                  margin: EdgeInsets.symmetric(horizontal: width * 0.04),
+                  height: height * 0.2,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(width * 0.04),
+                  ),
+                  clipBehavior: Clip.antiAlias,
+                  child: CachedNetworkImage(
+                    imageUrl: banner.image,
+                    fit: BoxFit.cover,
+                    placeholder: (context, url) => Container(
+                      color: Colors.grey.shade200,
+                      child: const SkeletonBox(),
+                    ),
+                    errorWidget: (context, url, error) => Container(
+                      color: Colors.grey.shade200,
+                      child: const Icon(Icons.image_not_supported),
+                    ),
+                  ),
+                );
+              }),
+              SizedBox(height: height * 0.015),
+
+              FlashSaleStrip(controller: flashSaleController),
 
               const BundleStrip(),
 
@@ -381,7 +668,7 @@ class _HomePageState extends State<HomePage> {
                   padding: EdgeInsets.symmetric(horizontal: width * 0.04),
                   child: Obx(() {
                     if (recommendedController.isLoading.value) {
-                      return const Center(child: CircularProgressIndicator());
+                      return const ProductGridSkeleton();
                     }
                     final recommended = recommendedController.recommendedList;
                     final displayCount = recommended.length > 6
@@ -412,7 +699,7 @@ class _HomePageState extends State<HomePage> {
                 if (bannerController.isLoading.value) {
                   return SizedBox(
                     height: height * 0.18,
-                    child: const Center(child: CircularProgressIndicator()),
+                    child: const SkeletonBox(height: 160, radius: 12),
                   );
                 }
 
@@ -436,26 +723,18 @@ class _HomePageState extends State<HomePage> {
                         ),
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(width * 0.04),
-                          child: Image.network(
-                            banner.image,
+                          child: CachedNetworkImage(
+                            imageUrl: banner.image,
                             fit: BoxFit.fill,
-                            errorBuilder: (context, error, stackTrace) {
-                              return Center(
-                                child: Icon(Icons.error, color: Colors.red),
-                              );
-                            },
-                            loadingBuilder: (context, child, loadingProgress) {
-                              if (loadingProgress == null) return child;
-                              return Center(
-                                child: CircularProgressIndicator(
-                                  value:
-                                      loadingProgress.expectedTotalBytes != null
-                                      ? loadingProgress.cumulativeBytesLoaded /
-                                            loadingProgress.expectedTotalBytes!
-                                      : null,
-                                ),
-                              );
-                            },
+                            placeholder: (context, url) => const Center(
+                              child: const SkeletonBox(),
+                            ),
+                            errorWidget: (context, url, error) => const Center(
+                              child: Icon(
+                                Icons.image_not_supported,
+                                color: Colors.grey,
+                              ),
+                            ),
                           ),
                         ),
                       );
@@ -480,7 +759,7 @@ class _HomePageState extends State<HomePage> {
                   // ── 3-column grid ─────────────────────────────
                   Obx(() {
                     if (productController.isLoading.value) {
-                      return const Center(child: CircularProgressIndicator());
+                      return const ProductGridSkeleton();
                     }
 
                     final products = productController.productList;
@@ -537,6 +816,15 @@ class _HomePageState extends State<HomePage> {
                   ],
                 );
               }),
+
+              Obx(
+                () => productController.isMoreLoading.value
+                    ? const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 20),
+                        child: Center(child: CircularProgressIndicator()),
+                      )
+                    : const SizedBox(height: 20),
+              ),
 
               // SizedBox(height: height * 0.05),
               // AppFooterBranding(),

@@ -10,6 +10,7 @@ import 'package:instant_delivery/services/api_service.dart';
 import 'package:instant_delivery/services/location_service.dart'
     as LocationService;
 import 'package:instant_delivery/widgets/navigation/custom_app_bar.dart';
+import 'package:instant_delivery/widgets/skeleton_loader.dart';
 
 class CheckoutPage extends StatefulWidget {
   final double totalAmount;
@@ -240,8 +241,12 @@ class _CheckoutPageState extends State<CheckoutPage> {
                           const SizedBox(height: 12),
                           Obx(() {
                             if (addressController.isLoading.value) {
-                              return const Center(
-                                child: CircularProgressIndicator(),
+                              return const Column(
+                                children: [
+                                  SkeletonBox(height: 48, radius: 10),
+                                  SizedBox(height: 8),
+                                  SkeletonBox(height: 48, radius: 10),
+                                ],
                               );
                             }
                             if (addressController.addressList.isEmpty) {
