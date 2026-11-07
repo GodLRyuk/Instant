@@ -1,3 +1,4 @@
+import 'package:instant_delivery/widgets/app_snackbar.dart';
 import 'package:get/get_core/src/get_main.dart';
 import 'package:get/get_instance/src/extension_instance.dart';
 import 'package:get/get_navigation/src/extension_navigation.dart';
@@ -31,7 +32,7 @@ class AuthController extends GetxController {
     final result = await _apiService.login(email, password);
     isLoading.value = false;
     if (result.containsKey('error')) {
-      Get.snackbar(
+      AppSnackbar.show(
         'Login Failed',
         result['error'],
         snackPosition: SnackPosition.BOTTOM,
@@ -47,23 +48,6 @@ class AuthController extends GetxController {
 
     // offAll clears the route stack — no lingering LoginPage to
     // back-swipe into once the user is authenticated.
-    Get.offAll(() => MainNavigation(initialIndex: 2));
-  }
-
-  Future<void> loginWithGoogleIdToken(String idToken) async {
-    isLoading.value = true;
-    final result = await _apiService.loginWithGoogle(idToken);
-    isLoading.value = false;
-    if (result.containsKey('error')) {
-      Get.snackbar(
-        'Google Sign-In Failed',
-        result['error'].toString(),
-        snackPosition: SnackPosition.BOTTOM,
-      );
-      return;
-    }
-    isLoggedIn.value = true;
-    isGuest.value = false;
     Get.offAll(() => MainNavigation(initialIndex: 2));
   }
 

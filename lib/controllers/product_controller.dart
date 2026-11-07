@@ -1,3 +1,4 @@
+import 'package:instant_delivery/widgets/app_snackbar.dart';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -394,7 +395,7 @@ class ProductController extends GetxController {
         await loadProductReviews(productId); // refresh list + average rating
         return true;
       } else {
-        Get.snackbar(
+        AppSnackbar.show(
           "Couldn't submit review",
           result['error'] ?? "Please try again",
           snackPosition: SnackPosition.BOTTOM,

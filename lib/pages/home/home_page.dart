@@ -59,6 +59,9 @@ class _HomePageState extends State<HomePage> {
   final RxList searchResults = [].obs;
   final RxBool showSearchBox = false.obs;
   int _currentPage = 0;
+  int _nextLazySection = 0;
+  bool _isLoadingInitialSections = true;
+  bool _isLoadingNextSection = false;
   Timer? _timer;
 
   final ProductController flashSaleController = Get.put(
@@ -118,7 +121,7 @@ class _HomePageState extends State<HomePage> {
     _homeScrollController.addListener(_handleHomeScroll);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _refreshData();
+      _loadInitialHomeSections();
     });
 
     _timer = Timer.periodic(const Duration(seconds: 3), (Timer timer) {
@@ -150,11 +153,74 @@ class _HomePageState extends State<HomePage> {
 
   void _handleHomeScroll() {
     if (!_homeScrollController.hasClients ||
-        _homeScrollController.position.extentAfter > 500 ||
-        productController.isLoading.value) {
+        _homeScrollController.position.extentAfter > 300 ||
+        _isLoadingInitialSections ||
+        _isLoadingNextSection) {
+      return;
+    }
+
+    if (_nextLazySection < 3) {
+      _loadNextHomeSection();
+      return;
+    }
+
+    if (productController.isLoading.value ||
+        productController.isMoreLoading.value) {
       return;
     }
     productController.loadMoreProducts();
+  }
+
+  Future<void> _loadInitialHomeSections() async {
+    try {
+      await Future.wait<void>([
+        categoryController.fetchCategories(),
+        productController.fetchProducts(),
+        newArrivalController.fetchNewArrivals(),
+        topBannerController.fetchTopBanners(),
+      ]);
+    } finally {
+      _isLoadingInitialSections = false;
+      if (mounted) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _handleHomeScroll();
+        });
+      }
+    }
+  }
+
+  Future<void> _loadNextHomeSection() async {
+    if (_isLoadingNextSection || _nextLazySection >= 3) return;
+    setState(() => _isLoadingNextSection = true);
+    try {
+      switch (_nextLazySection) {
+        case 0:
+          await Future.wait<void>([
+            flashSaleController.fetchFlashSale(),
+            bundleController.fetchBundles(),
+          ]);
+          break;
+        case 1:
+          await recommendedController.fetchRecommended();
+          break;
+        case 2:
+          await bannerController.fetchBanners();
+          break;
+      }
+      _nextLazySection++;
+    } catch (error, stackTrace) {
+      debugPrint('Unable to load the next home section: $error');
+      debugPrintStack(stackTrace: stackTrace);
+      // Move on so a failing optional section does not block later sections.
+      _nextLazySection++;
+    } finally {
+      if (mounted) {
+        setState(() => _isLoadingNextSection = false);
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _handleHomeScroll();
+        });
+      }
+    }
   }
 
   Future<void> _refreshData() async {
@@ -168,6 +234,7 @@ class _HomePageState extends State<HomePage> {
       flashSaleController.fetchFlashSale(),
       bundleController.fetchBundles(),
     ]);
+    _nextLazySection = 3;
   }
 
   Future<void> _ensureAddressesLoaded() async {
@@ -446,8 +513,12 @@ class _HomePageState extends State<HomePage> {
                                 await searchControllerX.filterBySearch(value);
 
                                 Get.to(
-                                  () => AllProductsPage(),
-                                  arguments: {"isSearch": true},
+                                  () => AllProductsPage(
+                                    initialProducts: searchControllerX
+                                        .productList
+                                        .toList(),
+                                    pageTitle: 'Search results',
+                                  ),
                                 );
                               },
 
@@ -470,8 +541,12 @@ class _HomePageState extends State<HomePage> {
                                       );
 
                                       Get.to(
-                                        () => AllProductsPage(),
-                                        arguments: {"isSearch": true},
+                                        () => AllProductsPage(
+                                          initialProducts: searchControllerX
+                                              .productList
+                                              .toList(),
+                                          pageTitle: 'Search results',
+                                        ),
                                       );
                                     }
                                   },
@@ -568,7 +643,13 @@ class _HomePageState extends State<HomePage> {
               // 🔥 Products Title
               SectionHeader(
                 title: 'New Arrival',
-                onViewAll: () => Get.to(() => AllProductsPage()),
+                onViewAll: () => Get.to(
+                  () => AllProductsPage(
+                    pageTitle: 'New Arrivals',
+                    prioritizedProducts: newArrivalController.newArrivalList
+                        .toList(),
+                  ),
+                ),
               ),
 
               SizedBox(height: height * 0.015),
@@ -658,7 +739,13 @@ class _HomePageState extends State<HomePage> {
               if (recommendedController.recommendedList.isNotEmpty) ...[
                 SectionHeader(
                   title: 'Recommended for you',
-                  onViewAll: () => Get.to(() => AllProductsPage()),
+                  onViewAll: () => Get.to(
+                    () => AllProductsPage(
+                      pageTitle: 'Recommended for you',
+                      prioritizedProducts: recommendedController.recommendedList
+                          .toList(),
+                    ),
+                  ),
                 ),
 
                 SizedBox(height: height * 0.015),
@@ -751,7 +838,13 @@ class _HomePageState extends State<HomePage> {
                   // ── Header ──────────────────────────────────
                   SectionHeader(
                     title: 'Top Picks',
-                    onViewAll: () => Get.to(() => AllProductsPage()),
+                    onViewAll: () => Get.to(
+                      () => AllProductsPage(
+                        pageTitle: 'Top Picks',
+                        prioritizedProducts: productController.productList
+                            .toList(),
+                      ),
+                    ),
                   ),
 
                   SizedBox(height: height * 0.018),
@@ -818,7 +911,9 @@ class _HomePageState extends State<HomePage> {
               }),
 
               Obx(
-                () => productController.isMoreLoading.value
+                () =>
+                    _isLoadingNextSection ||
+                        productController.isMoreLoading.value
                     ? const Padding(
                         padding: EdgeInsets.symmetric(vertical: 20),
                         child: Center(child: CircularProgressIndicator()),
@@ -880,7 +975,9 @@ class _HomePageState extends State<HomePage> {
             SectionHeader(
               title: title,
               subtitle: subtitle,
-              onViewAll: () => Get.to(() => AllProductsPage()),
+              onViewAll: () => Get.to(
+                () => AllProductsPage(categoryId: categoryId, pageTitle: title),
+              ),
             ),
 
             SizedBox(height: height * 0.012),

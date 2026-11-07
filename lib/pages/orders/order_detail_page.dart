@@ -135,10 +135,12 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
 
               const SizedBox(height: 20),
 
-              // if (deliveryOtp != null && deliveryOtp.isNotEmpty) ...[
-              _buildDeliveryOtpCard(deliveryOtp!),
-              const SizedBox(height: 20),
-              // ],
+              if (status != 'DELIVERED' &&
+                  deliveryOtp != null &&
+                  deliveryOtp.isNotEmpty) ...[
+                _buildDeliveryOtpCard(deliveryOtp),
+                const SizedBox(height: 20),
+              ],
 
               // ── SCHEDULED INFO (if applicable) ───────────────
               if (isScheduled) _buildScheduledCard(order),

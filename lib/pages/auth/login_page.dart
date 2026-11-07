@@ -1,3 +1,4 @@
+import 'package:instant_delivery/widgets/app_snackbar.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:instant_delivery/route/app_routes.dart';
@@ -193,7 +194,7 @@ class _LoginPageState extends State<LoginPage> {
                             if (email != null && password != null) {
                               authController.login(email, password);
                             } else {
-                              Get.snackbar(
+                              AppSnackbar.show(
                                 "Error",
                                 "No saved credentials found",
                                 snackPosition: SnackPosition.BOTTOM,

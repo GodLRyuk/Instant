@@ -45,18 +45,33 @@ const List<_FilterOption> _kPriceOptions = [
 ];
 
 class AllProductsPage extends StatefulWidget {
-  const AllProductsPage({super.key});
+  final List<ProductModel>? initialProducts;
+  final List<ProductModel>? prioritizedProducts;
+  final String? categoryId;
+  final String? pageTitle;
+
+  const AllProductsPage({
+    super.key,
+    this.initialProducts,
+    this.prioritizedProducts,
+    this.categoryId,
+    this.pageTitle,
+  });
 
   @override
   State<AllProductsPage> createState() => _AllProductsPageState();
 }
 
 class _AllProductsPageState extends State<AllProductsPage> {
-  late ProductController productController;
+  late final ProductController productController;
   bool isSearch = false;
 
-  final CategoryController categoryController = Get.put(CategoryController());
+  final CategoryController categoryController = CategoryController(
+    loadOnInit: false,
+  );
   final TextEditingController searchController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
+  String? _categoryFilterId;
 
   var selectedCategoryId = "all".obs;
 
@@ -78,43 +93,102 @@ class _AllProductsPageState extends State<AllProductsPage> {
   void initState() {
     super.initState();
 
-    final args = Get.arguments;
-    if (args != null && args['isSearch'] == true) {
-      isSearch = true;
-      productController = Get.find<ProductController>(tag: "search");
+    productController = ProductController(loadOnInit: false);
+    categoryController.fetchCategories();
+    _scrollController.addListener(_handleListScroll);
+    isSearch = widget.initialProducts != null;
+
+    if (isSearch) {
+      final initialProducts = widget.initialProducts!;
+      _baseProducts.assignAll(initialProducts);
+      productController.productList.assignAll(initialProducts);
     } else {
-      productController = Get.find<ProductController>(tag: "all");
+      if (widget.categoryId != null) {
+        _categoryFilterId = widget.categoryId;
+        selectedCategoryId.value = widget.categoryId!;
+        selectedFilterValues.value = {
+          "Categories": {widget.categoryId!},
+        };
+      }
       WidgetsBinding.instance.addPostFrameCallback((_) async {
-        await productController.fetchProducts();
-        _baseProducts.assignAll(productController.productList);
-        _applyFacetFilters();
+        if (widget.categoryId != null) {
+          await _loadCategoryProducts(widget.categoryId!);
+        } else {
+          productController.isLoading.value = true;
+          await productController.fetchProducts();
+          _baseProducts.assignAll(productController.productList);
+          _prioritizeProducts(widget.prioritizedProducts ?? const []);
+          _applyFacetFilters();
+          _scheduleLoadIfNeeded();
+        }
       });
     }
+  }
 
+  void _handleListScroll() {
+    if (!_scrollController.hasClients ||
+        _scrollController.position.extentAfter > 300 ||
+        isSearch ||
+        _categoryFilterId != null ||
+        productController.isLoading.value ||
+        productController.isMoreLoading.value ||
+        !productController.hasMore) {
+      return;
+    }
+    _loadNextPage();
+  }
+
+  void _scheduleLoadIfNeeded() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (isSearch && Get.arguments != null) {
-        final all = Get.arguments['results'];
-        productController.productList.assignAll(all);
-        _baseProducts.assignAll(all);
-        _applyFacetFilters();
-      }
+      if (mounted) _handleListScroll();
     });
+  }
+
+  Future<void> _loadNextPage() async {
+    final existingIds = _baseProducts
+        .cast<ProductModel>()
+        .map((product) => product.id)
+        .toSet();
+    await productController.loadMoreProducts();
+    final nextProducts = productController.productList
+        .where((product) => !existingIds.contains(product.id))
+        .toList();
+    if (nextProducts.isEmpty) return;
+    _baseProducts.addAll(nextProducts);
+    _applyFacetFilters();
+    _scheduleLoadIfNeeded();
+  }
+
+  void _prioritizeProducts(List<ProductModel> prioritizedProducts) {
+    if (prioritizedProducts.isEmpty) return;
+
+    final seenIds = <int>{};
+    final orderedProducts = <ProductModel>[];
+    for (final product in prioritizedProducts) {
+      if (seenIds.add(product.id)) orderedProducts.add(product);
+    }
+    for (final product in _baseProducts.cast<ProductModel>()) {
+      if (seenIds.add(product.id)) orderedProducts.add(product);
+    }
+    _baseProducts.assignAll(orderedProducts);
   }
 
   // ── Category loading (re-establishes _baseProducts, then re-applies
   // whatever facet filters are currently selected — e.g. Price) ─────
   Future<void> _loadCategoryProducts(String id) async {
     if (isSearch) {
-      final all = Get.arguments?['results'] ?? [];
+      final all = widget.initialProducts ?? const <ProductModel>[];
       if (id == "all") {
         _baseProducts.assignAll(all);
       } else {
         _baseProducts.assignAll(
-          all.where((p) => p.category.toString() == id).toList(),
+          all.where((p) => p.categoryId.toString() == id).toList(),
         );
       }
     } else {
+      _categoryFilterId = id == "all" ? null : id;
       if (id == "all") {
+        productController.isLoading.value = true;
         await productController.fetchProducts();
       } else {
         await productController.fetchProductsByCategory(id);
@@ -122,6 +196,7 @@ class _AllProductsPageState extends State<AllProductsPage> {
       _baseProducts.assignAll(productController.productList);
     }
     _applyFacetFilters();
+    _scheduleLoadIfNeeded();
   }
 
   // ── Facet filtering — Categories is now handled by
@@ -182,7 +257,11 @@ class _AllProductsPageState extends State<AllProductsPage> {
 
   @override
   void dispose() {
+    _scrollController
+      ..removeListener(_handleListScroll)
+      ..dispose();
     searchController.dispose();
+    productController.scrollController.dispose();
     super.dispose();
   }
 
@@ -191,7 +270,7 @@ class _AllProductsPageState extends State<AllProductsPage> {
     return Scaffold(
       backgroundColor: _kSurface,
       appBar: CustomAppBar(
-        title: "All Products",
+        title: widget.pageTitle ?? "All Products",
         isTransparent: false,
         showBackButton: true,
       ),
@@ -203,6 +282,7 @@ class _AllProductsPageState extends State<AllProductsPage> {
           );
         }
         return CustomScrollView(
+          controller: _scrollController,
           physics: const BouncingScrollPhysics(),
           slivers: [
             // ── Filter chip bar ──────────────────────────────────
@@ -229,6 +309,24 @@ class _AllProductsPageState extends State<AllProductsPage> {
                     final product = productController.productList[index];
                     return _ProductCard(product: product);
                   }, childCount: productController.productList.length),
+                ),
+              );
+            }),
+
+            Obx(() {
+              if (!productController.isMoreLoading.value) {
+                return const SliverToBoxAdapter(child: SizedBox(height: 12));
+              }
+              return const SliverToBoxAdapter(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(vertical: 20),
+                  child: Center(
+                    child: SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(strokeWidth: 2.5),
+                    ),
+                  ),
                 ),
               );
             }),

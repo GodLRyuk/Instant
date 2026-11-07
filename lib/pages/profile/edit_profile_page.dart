@@ -1,3 +1,4 @@
+import 'package:instant_delivery/widgets/app_snackbar.dart';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -168,10 +169,10 @@ class _EditProfilePageState extends State<EditProfilePage> {
                         await profileController.fetchProfile();
 
                         Get.back();
-                        Get.snackbar("Success", "Profile updated");
+                        AppSnackbar.show("Success", "Profile updated");
                       }
                     } catch (e) {
-                      Get.snackbar("Error", e.toString());
+                      AppSnackbar.show("Error", e.toString());
                     } finally {
                       setState(() => isLoading = false);
                     }

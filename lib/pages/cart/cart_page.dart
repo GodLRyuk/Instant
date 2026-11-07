@@ -1,3 +1,4 @@
+import 'package:instant_delivery/widgets/app_snackbar.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:instant_delivery/controllers/address_controller.dart';
@@ -709,7 +710,7 @@ class _CartPageState extends State<CartPage> {
           // Validate slot selection when scheduled
           if (_deliveryType == 'SCHEDULED' &&
               (_selectedSlotStart == null || _selectedSlotEnd == null)) {
-            Get.snackbar(
+            AppSnackbar.show(
               'Select a time slot',
               'Please pick a date and time slot before checking out',
               snackPosition: SnackPosition.BOTTOM,

@@ -1,3 +1,4 @@
+import 'package:instant_delivery/widgets/app_snackbar.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:instant_delivery/config/app_config.dart';
@@ -116,7 +117,7 @@ class PaymentController extends GetxController {
 
       _razorpay.open(options);
     } catch (e) {
-      Get.snackbar("Error", e.toString());
+      AppSnackbar.show("Error", e.toString());
     } finally {
       isLoading.value = false;
     }
@@ -164,7 +165,7 @@ class PaymentController extends GetxController {
 
       _clearPending();
 
-      Get.snackbar(
+      AppSnackbar.show(
         "Success",
         "Order Placed Successfully!",
         snackPosition: SnackPosition.TOP,
@@ -172,7 +173,7 @@ class PaymentController extends GetxController {
 
       Get.offAll(() => const MainNavigation(initialIndex: 2));
     } catch (e) {
-      Get.snackbar(
+      AppSnackbar.show(
         "Error",
         "Order creation failed — contact support",
         snackPosition: SnackPosition.TOP,
@@ -198,7 +199,7 @@ class PaymentController extends GetxController {
 
   // Payment cancelled/failed — no order was created, nothing to clean up
   void _handleError(PaymentFailureResponse response) {
-    Get.snackbar(
+    AppSnackbar.show(
       "Payment Failed",
       response.message ?? "Something went wrong",
       snackPosition: SnackPosition.TOP,
@@ -206,7 +207,7 @@ class PaymentController extends GetxController {
   }
 
   void _handleWallet(ExternalWalletResponse response) {
-    Get.snackbar("Wallet", response.walletName ?? "");
+    AppSnackbar.show("Wallet", response.walletName ?? "");
   }
 
   void _showErrorSheet(String message) {

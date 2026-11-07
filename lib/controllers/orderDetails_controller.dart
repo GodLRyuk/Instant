@@ -1,3 +1,4 @@
+import 'package:instant_delivery/widgets/app_snackbar.dart';
 import 'package:get/get_core/src/get_main.dart';
 import 'package:get/get_navigation/src/extension_navigation.dart';
 import 'package:get/get_rx/src/rx_types/rx_types.dart';
@@ -18,7 +19,7 @@ class OrderDetailController extends GetxController {
       orderDetail.value = data;
 
     } catch (e) {
-      Get.snackbar("Error", e.toString());
+      AppSnackbar.show("Error", e.toString());
     } finally {
       isLoading.value = false;
     }

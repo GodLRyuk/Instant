@@ -1,3 +1,4 @@
+import 'package:instant_delivery/widgets/app_snackbar.dart';
 import 'package:get/get.dart';
 import 'package:instant_delivery/config/app_config.dart';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
@@ -54,7 +55,7 @@ class PassPaymentController extends GetxController {
 
       _razorpay.open(options);
     } catch (e) {
-      Get.snackbar("Error", e.toString(), snackPosition: SnackPosition.BOTTOM);
+      AppSnackbar.show("Error", e.toString(), snackPosition: SnackPosition.BOTTOM);
     } finally {
       isLoading.value = false;
     }
@@ -133,7 +134,7 @@ class PassPaymentController extends GetxController {
 
   // ── Razorpay error ────────────────────────────────────────────
   void _handleError(PaymentFailureResponse response) {
-    Get.snackbar(
+    AppSnackbar.show(
       "Payment Failed",
       response.message ?? "Something went wrong",
       snackPosition: SnackPosition.TOP,
@@ -141,7 +142,7 @@ class PassPaymentController extends GetxController {
   }
 
   void _handleWallet(ExternalWalletResponse response) {
-    Get.snackbar(
+    AppSnackbar.show(
       "Wallet",
       response.walletName ?? "",
       snackPosition: SnackPosition.BOTTOM,

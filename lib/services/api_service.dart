@@ -41,7 +41,7 @@ class ApiService {
   String _errorMessage(DioException error, String fallback) {
     final data = error.response?.data;
     if (data is Map) {
-      final message = data['message'] ?? data['error'] ?? data['detail'];
+      final message = data['message'];
       if (message != null && message.toString().isNotEmpty) {
         return message.toString();
       }
@@ -76,7 +76,23 @@ class ApiService {
           };
         }
 
-        await _persistSession(data);
+        final prefs = await SharedPreferences.getInstance();
+
+        // Store tokens securely
+        await _secureStorage.write('access_token', accessToken);
+        await _secureStorage.write('refresh_token', refreshToken);
+
+        // User info
+        await prefs.setInt('user_id', data['user_id'] ?? 0);
+        await prefs.setString('email', data['email'] ?? '');
+        await prefs.setString('phone', data['phone'] ?? '');
+        await prefs.setString('role', data['role'] ?? '');
+        await prefs.setString('profile_image', data['profile_image'] ?? '');
+
+        final fcmToken = prefs.getString('fcm_token');
+        if (fcmToken != null && fcmToken.isNotEmpty) {
+          await saveDeviceToken(fcmToken);
+        }
 
         return data;
       } else {
@@ -96,57 +112,6 @@ class ApiService {
     } catch (e) {
       LogService.e('Unexpected login error', error: e);
       return {'error': 'Unexpected error: $e'};
-    }
-  }
-
-  /// Exchanges a Google ID token with the Django API and persists its session.
-  /// The API must verify the token and return the same session fields as login.
-  Future<Map<String, dynamic>> loginWithGoogle(String idToken) async {
-    try {
-      final response = await _dio.post(
-        '/accounts/google-auth/',
-        data: {'id_token': idToken},
-        options: Options(headers: {'Content-Type': 'application/json'}),
-      );
-      if (response.data is! Map<String, dynamic>) {
-        return {'error': 'Google authentication returned an invalid response'};
-      }
-      final data = Map<String, dynamic>.from(response.data);
-      final accessToken = data['access'];
-      final refreshToken = data['refresh'];
-      if (accessToken is! String ||
-          accessToken.isEmpty ||
-          refreshToken is! String ||
-          refreshToken.isEmpty) {
-        return {'error': 'Google authentication did not return session tokens'};
-      }
-      await _persistSession(data);
-      return data;
-    } on DioException catch (e) {
-      LogService.e('Google authentication error', error: e);
-      return {'error': _errorMessage(e, 'Google authentication failed')};
-    } catch (e) {
-      LogService.e('Unexpected Google authentication error', error: e);
-      return {'error': 'Google authentication failed: $e'};
-    }
-  }
-
-  Future<void> _persistSession(Map<String, dynamic> data) async {
-    final prefs = await SharedPreferences.getInstance();
-    await _secureStorage.write('access_token', data['access'] as String);
-    await _secureStorage.write('refresh_token', data['refresh'] as String);
-    await prefs.setInt('user_id', (data['user_id'] as num?)?.toInt() ?? 0);
-    await prefs.setString('email', data['email']?.toString() ?? '');
-    await prefs.setString('phone', data['phone']?.toString() ?? '');
-    await prefs.setString('role', data['role']?.toString() ?? '');
-    await prefs.setString(
-      'profile_image',
-      data['profile_image']?.toString() ?? '',
-    );
-
-    final fcmToken = prefs.getString('fcm_token');
-    if (fcmToken != null && fcmToken.isNotEmpty) {
-      await saveDeviceToken(fcmToken);
     }
   }
 
