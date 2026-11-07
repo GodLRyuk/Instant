@@ -1,3 +1,4 @@
+import 'package:instant_delivery/widgets/app_snackbar.dart';
 import 'package:get/get.dart';
 import 'package:instant_delivery/services/api_service.dart';
 
@@ -22,11 +23,11 @@ class ProfileController extends GetxController {
       if (response.statusCode == 200) {
         user.value = response.data; // ✅ FIX HERE
       } else {
-        Get.snackbar("Error", "Failed to load profile");
+        AppSnackbar.show("Error", "Failed to load profile");
       }
 
     } catch (e) {
-      Get.snackbar("Error", "Something went wrong");
+      AppSnackbar.show("Error", "Something went wrong");
       print(e);
     } finally {
       isLoading.value = false;

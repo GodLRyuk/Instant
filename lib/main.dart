@@ -120,6 +120,15 @@ class _MyAppState extends State<MyApp> {
       child: GetMaterialApp(
         title: 'Delivery App',
         debugShowCheckedModeBanner: false,
+        builder: (context, child) => Theme(
+          data: Theme.of(context).copyWith(
+            snackBarTheme: const SnackBarThemeData(
+              backgroundColor: Color(0xFF303030),
+              contentTextStyle: TextStyle(color: Colors.white),
+            ),
+          ),
+          child: child ?? const SizedBox.shrink(),
+        ),
         initialBinding: AuthBinding(
           initialIsLoggedIn: widget.hasSavedSession,
         ),

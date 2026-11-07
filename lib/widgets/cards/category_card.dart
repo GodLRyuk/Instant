@@ -68,33 +68,36 @@ Widget _sectionHeader(
           ),
         ),
         if (onViewAll != null)
-          GestureDetector(
-            onTap: onViewAll,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  'View All',
-                  style: TextStyle(
-                    fontSize: width * 0.035,
-                    color: Colors.green.shade700,
-                    fontWeight: FontWeight.w600,
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 1.5),
+            child: GestureDetector(
+              onTap: onViewAll,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'View All',
+                    style: TextStyle(
+                      fontSize: width * 0.035,
+                      color: Colors.green.shade700,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
-                ),
-                const SizedBox(width: 4),
-                Container(
-                  padding: const EdgeInsets.all(4),
-                  decoration: BoxDecoration(
-                    color: Colors.green.shade700,
-                    shape: BoxShape.circle,
+                  const SizedBox(width: 4),
+                  Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: Colors.green.shade700,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.arrow_forward,
+                      size: 12,
+                      color: Colors.white,
+                    ),
                   ),
-                  child: const Icon(
-                    Icons.arrow_forward,
-                    size: 12,
-                    color: Colors.white,
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
       ],

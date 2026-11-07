@@ -1,3 +1,4 @@
+import 'package:instant_delivery/widgets/app_snackbar.dart';
 import 'package:get/get.dart';
 import 'package:instant_delivery/models/product_model.dart';
 import 'package:instant_delivery/services/api_service.dart';
@@ -45,9 +46,9 @@ class WishlistController extends GetxController {
       final success = await _api.removeFromWishlist(product.id);
       if (!success) {
         items.add(product); // revert
-        Get.snackbar('Error', 'Could not remove from wishlist');
+        AppSnackbar.show('Error', 'Could not remove from wishlist');
       } else {
-        Get.snackbar(
+        AppSnackbar.show(
           'Removed',
           '${product.name} removed from wishlist',
           snackPosition: SnackPosition.BOTTOM,
@@ -59,9 +60,9 @@ class WishlistController extends GetxController {
       final success = await _api.addToWishlist(product.id);
       if (!success) {
         items.removeWhere((p) => p.id == product.id); // revert
-        Get.snackbar('Error', 'Could not add to wishlist');
+        AppSnackbar.show('Error', 'Could not add to wishlist');
       } else {
-        Get.snackbar(
+        AppSnackbar.show(
           'Saved',
           '${product.name} added to wishlist',
           snackPosition: SnackPosition.BOTTOM,

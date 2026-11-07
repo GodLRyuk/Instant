@@ -1,3 +1,4 @@
+import 'package:instant_delivery/widgets/app_snackbar.dart';
 import 'package:get/get.dart';
 import 'package:flutter/material.dart';
 import 'package:instant_delivery/controllers/cart_controller.dart';
@@ -42,7 +43,7 @@ class BundleController extends GetxController {
         Get.find<CartController>().fetchCart();
       }
 
-      Get.snackbar(
+      AppSnackbar.show(
         'Added to Cart',
         '${bundle.name} products added successfully!',
         snackPosition: SnackPosition.BOTTOM,
@@ -51,7 +52,7 @@ class BundleController extends GetxController {
         duration: const Duration(seconds: 2),
       );
     } catch (e) {
-      Get.snackbar(
+      AppSnackbar.show(
         'Error',
         'Failed to add bundle: $e',
         snackPosition: SnackPosition.BOTTOM,

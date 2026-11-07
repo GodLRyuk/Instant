@@ -1,3 +1,4 @@
+import 'package:instant_delivery/widgets/app_snackbar.dart';
 // lib/controllers/pass_controller.dart
 
 import 'package:get/get_core/src/get_main.dart';
@@ -59,20 +60,20 @@ void onInit() {
       final result = await _api.purchasePass(planType: planType);
       if (result['statusCode'] == 200) {
         await fetchPassStatus();
-        Get.snackbar(
+        AppSnackbar.show(
           "🎉 Pass Activated!",
           result['data']['message'] ?? "Your pass is now active",
           snackPosition: SnackPosition.TOP,
         );
       } else {
-        Get.snackbar(
+        AppSnackbar.show(
           "Error",
           result['data']['error'] ?? "Something went wrong",
           snackPosition: SnackPosition.BOTTOM,
         );
       }
     } catch (e) {
-      Get.snackbar("Error", e.toString());
+      AppSnackbar.show("Error", e.toString());
     } finally {
       isPurchasing.value = false;
     }

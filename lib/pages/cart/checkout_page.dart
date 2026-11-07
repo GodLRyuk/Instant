@@ -1,3 +1,4 @@
+import 'package:instant_delivery/widgets/app_snackbar.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:instant_delivery/controllers/address_controller.dart';
@@ -45,19 +46,12 @@ class _CheckoutPageState extends State<CheckoutPage> {
   final PassController passController = Get.put(PassController()); // ← add
 
   bool showAllItems = false;
-  bool showHiddenCharges = false;
-  List<Map<String, dynamic>> get _hiddenCharges => [
-    {"label": "Paper Bag Charge", "amount": 10.0},
-    // {"label": "Carry Bag Charge", "amount": 5.0},
-  ];
-  double get _hiddenChargesTotal => _hiddenCharges.fold<double>(
-    0.0,
-    (sum, c) => sum + (c["amount"] as double),
-  );
   final RxBool isConfirmingOrder = false.obs;
   final RxDouble estimatedDeliveryFee = 0.0.obs;
   final RxBool isFeeLoading = false.obs;
+  final RxBool isAddressValidationComplete = false.obs;
   final RxString feeError = ''.obs;
+  int _deliveryValidationRequest = 0;
 
   final TextEditingController _couponCtrl = TextEditingController();
   String _localCouponCode = '';
@@ -97,32 +91,37 @@ class _CheckoutPageState extends State<CheckoutPage> {
   double get finalAmount =>
       (widget.totalAmount - _activeDiscount) +
       deliveryCharge -
-      couponController.discountAmount.value +
-      _hiddenChargesTotal;
+      couponController.discountAmount.value;
 
-  double get subtotal =>
-      widget.totalAmount + deliveryCharge + _hiddenChargesTotal;
+  double get subtotal => widget.totalAmount + deliveryCharge;
 
   @override
   void initState() {
     super.initState();
     if (!authController.isLoggedIn.value) return;
 
-    addressController.fetchAddresses().then((_) {
-      if (addressController.selectedAddress.value != null) {
-        _fetchDeliveryFee();
-      }
-    });
-    ever(addressController.selectedAddress, (_) {
+    if (addressController.selectedAddress.value != null) {
       _fetchDeliveryFee();
-    });
+    } else {
+      addressController.fetchAddresses().then((_) {
+        if (addressController.selectedAddress.value != null) {
+          _fetchDeliveryFee();
+        }
+      });
+    }
   }
 
-  Future<void> _fetchDeliveryFee() async {
+  Future<bool> _fetchDeliveryFee() async {
     final address = addressController.selectedAddress.value;
-    if (address == null) return;
+    if (address == null) {
+      isAddressValidationComplete.value = false;
+      feeError.value = 'Please select a delivery address.';
+      return false;
+    }
 
+    final requestId = ++_deliveryValidationRequest;
     isFeeLoading.value = true;
+    isAddressValidationComplete.value = false;
     feeError.value = '';
 
     try {
@@ -142,27 +141,69 @@ class _CheckoutPageState extends State<CheckoutPage> {
         currentLng: null,
       );
 
-      if (res["statusCode"] == 200) {
-        final data = res["data"];
-        estimatedDeliveryFee.value = (data["delivery_fee"] as num).toDouble();
-      } else {
-        final data = res["data"];
-        String msg =
-            data['non_field_errors']?.first?.toString() ??
-            "Delivery not available for this address.";
-        if (data is Map) {
-          final val = data.values.first;
-          msg = val is List ? val.first.toString() : val.toString();
-        }
-        feeError.value = msg;
+      if (requestId != _deliveryValidationRequest) return false;
+
+      final data = res['data'];
+      if (res['statusCode'] != 200 || !_isOrderDeliverable(data)) {
+        feeError.value = _deliveryValidationMessage(data);
         estimatedDeliveryFee.value = 0.0;
+        return false;
       }
-    } catch (e) {
-      feeError.value = "Delivery not available for this address.";
+
+      final deliveryFee = data is Map ? data['delivery_fee'] : null;
+      estimatedDeliveryFee.value = deliveryFee is num
+          ? deliveryFee.toDouble()
+          : double.tryParse(deliveryFee?.toString() ?? '') ?? 0.0;
+      isAddressValidationComplete.value = true;
+      return true;
+    } catch (error) {
+      if (requestId != _deliveryValidationRequest) return false;
+      feeError.value = _deliveryValidationMessage(error);
       estimatedDeliveryFee.value = 0.0;
+      return false;
     } finally {
-      isFeeLoading.value = false;
+      if (requestId == _deliveryValidationRequest) {
+        isFeeLoading.value = false;
+      }
     }
+  }
+
+  bool _isOrderDeliverable(dynamic data) {
+    if (data is! Map) return true;
+    if (data['success'] == false || data['valid'] == false) return false;
+    final status = data['status']?.toString().toLowerCase();
+    if (status == 'error' || status == 'failed' || status == 'unavailable') {
+      return false;
+    }
+    for (final key in [
+      'is_deliverable',
+      'is_deliverable_to_address',
+      'deliverable',
+      'is_serviceable',
+      'serviceable',
+      'is_valid',
+    ]) {
+      if (data[key] == false) return false;
+    }
+    return true;
+  }
+
+  String _deliveryValidationMessage(dynamic data) {
+    if (data is Map) {
+      for (final key in ['message', 'error', 'detail', 'non_field_errors']) {
+        final value = data[key];
+        if (value is List && value.isNotEmpty) return value.first.toString();
+        if (value != null && value.toString().isNotEmpty) {
+          return value.toString();
+        }
+      }
+      if (data.isNotEmpty) {
+        final value = data.values.first;
+        if (value is List && value.isNotEmpty) return value.first.toString();
+        return value.toString();
+      }
+    }
+    return 'Delivery is unavailable for the selected address or cart items.';
   }
 
   @override
@@ -266,8 +307,10 @@ class _CheckoutPageState extends State<CheckoutPage> {
                                         ?.id ==
                                     address.id;
                                 return GestureDetector(
-                                  onTap: () =>
-                                      addressController.selectAddress(address),
+                                  onTap: () {
+                                    addressController.selectAddress(address);
+                                    _fetchDeliveryFee();
+                                  },
                                   child: AnimatedContainer(
                                     duration: const Duration(milliseconds: 250),
                                     margin: const EdgeInsets.only(bottom: 10),
@@ -576,75 +619,6 @@ class _CheckoutPageState extends State<CheckoutPage> {
                             ),
                           ],
                           const Divider(),
-                          GestureDetector(
-                            onTap: () => setState(
-                              () => showHiddenCharges = !showHiddenCharges,
-                            ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Row(
-                                  children: [
-                                    const Text("Hidden Charges"),
-                                    Icon(
-                                      showHiddenCharges
-                                          ? Icons.keyboard_arrow_up
-                                          : Icons.keyboard_arrow_down,
-                                      size: 18,
-                                      color: Colors.grey,
-                                    ),
-                                  ],
-                                ),
-                                Text(
-                                  "₹${_hiddenChargesTotal.toStringAsFixed(2)}",
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.green,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          AnimatedCrossFade(
-                            duration: const Duration(milliseconds: 200),
-                            crossFadeState: showHiddenCharges
-                                ? CrossFadeState.showFirst
-                                : CrossFadeState.showSecond,
-                            firstChild: Padding(
-                              padding: const EdgeInsets.only(top: 8, left: 8),
-                              child: Column(
-                                children: _hiddenCharges.map((charge) {
-                                  return Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: 3,
-                                    ),
-                                    child: Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Text(
-                                          charge["label"],
-                                          style: TextStyle(
-                                            color: Colors.grey.shade700,
-                                            fontSize: 13,
-                                          ),
-                                        ),
-                                        Text(
-                                          "₹${(charge["amount"] as double).toStringAsFixed(2)}",
-                                          style: TextStyle(
-                                            color: Colors.grey.shade700,
-                                            fontSize: 13,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  );
-                                }).toList(),
-                              ),
-                            ),
-                            secondChild: const SizedBox.shrink(),
-                          ),
-                          const Divider(),
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
@@ -726,20 +700,25 @@ class _CheckoutPageState extends State<CheckoutPage> {
 
                             if (addressController.selectedAddress.value ==
                                 null) {
-                              Get.snackbar("Error", "Please select an address");
-                              return;
-                            }
-                            if (feeError.value.isNotEmpty) {
-                              // ✅ NEW
-                              Get.snackbar(
-                                "Delivery Unavailable",
-                                feeError.value,
-                              );
+                              AppSnackbar.show("Error", "Please select an address");
                               return;
                             }
 
                             isConfirmingOrder.value = true;
                             try {
+                              final isDeliverable = await _fetchDeliveryFee();
+                              if (!isDeliverable ||
+                                  !isAddressValidationComplete.value ||
+                                  feeError.value.isNotEmpty) {
+                                AppSnackbar.show(
+                                  "Delivery Unavailable",
+                                  feeError.value.isNotEmpty
+                                      ? feeError.value
+                                      : 'Delivery is unavailable for the selected address or cart items.',
+                                );
+                                return;
+                              }
+
                               final locationData =
                                   await LocationService.getCurrentAddress();
                               final String? lat = locationData["lat"];
@@ -763,7 +742,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
                                 ),
                               );
                             } catch (e) {
-                              Get.snackbar(
+                              AppSnackbar.show(
                                 "Location Error",
                                 "Could not get your location. Please enable GPS.",
                               );
@@ -1292,7 +1271,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
           controller.text = data["fullAddress"]!;
         } catch (e) {
           Get.back();
-          Get.snackbar(
+          AppSnackbar.show(
             "Error",
             "Failed to get location",
             snackPosition: SnackPosition.BOTTOM,

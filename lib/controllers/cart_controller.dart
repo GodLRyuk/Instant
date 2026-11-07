@@ -1,3 +1,4 @@
+import 'package:instant_delivery/widgets/app_snackbar.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -21,7 +22,7 @@ class CartController extends GetxController {
       final data = await _apiService.addToCart(productId, quantity);
 
       if (data.statusCode == 200) {
-        Get.snackbar(
+        AppSnackbar.show(
           "Success",
           data.data["message"] ?? "Added to cart",
           backgroundColor: Colors.green.shade600,
@@ -33,7 +34,7 @@ class CartController extends GetxController {
         );
         return true; // ✅ success
       } else {
-        Get.snackbar(
+        AppSnackbar.show(
           "Oops",
           data.data['error'] ?? "Failed to add to cart",
           backgroundColor: Colors.red.shade600,
@@ -58,7 +59,7 @@ class CartController extends GetxController {
         }
       }
 
-      Get.snackbar(
+      AppSnackbar.show(
         "Error",
         errorMessage,
         backgroundColor: Colors.red.shade600,
@@ -105,11 +106,11 @@ class CartController extends GetxController {
         await fetchCart();
         return true;
       } else {
-        Get.snackbar("Error", "Failed to update cart");
+        AppSnackbar.show("Error", "Failed to update cart");
         return false;
       }
     } catch (e) {
-      Get.snackbar("Error", e.toString());
+      AppSnackbar.show("Error", e.toString());
       return false;
     } finally {
       isUpdating.value = false;

@@ -1,3 +1,4 @@
+import 'package:instant_delivery/widgets/app_snackbar.dart';
 import 'package:get/get.dart';
 import '../services/api_service.dart';
 
@@ -34,7 +35,7 @@ void onInit() {
       final data = await _apiService.getOrders();
       orderList.value = data;
     } catch (e) {
-      Get.snackbar("Error", e.toString());
+      AppSnackbar.show("Error", e.toString());
     } finally {
       isLoading.value = false;
     }

@@ -1,3 +1,4 @@
+import 'package:instant_delivery/widgets/app_snackbar.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:instant_delivery/controllers/payment_controller.dart';
@@ -203,7 +204,7 @@ class _PaymentPageState extends State<PaymentPage> {
 
   /// 🔥 COD ORDER
   void placeOrderCOD() {
-    Get.snackbar("Success", "Order placed with Cash on Delivery");
+    AppSnackbar.show("Success", "Order placed with Cash on Delivery");
     // 👉 Call your order API here
   }
 
@@ -221,7 +222,7 @@ class _PaymentPageState extends State<PaymentPage> {
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     } else {
-      Get.snackbar("Error", "No UPI app found");
+      AppSnackbar.show("Error", "No UPI app found");
     }
   }
 }
