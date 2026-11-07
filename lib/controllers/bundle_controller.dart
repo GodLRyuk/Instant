@@ -10,6 +10,7 @@ class BundleController extends GetxController {
   var bundleList = <BundleModel>[].obs;
   var isLoading = false.obs;
   final bool loadOnInit;
+  bool _bundlesLoaded = false;
 
   BundleController({this.loadOnInit = true});
 
@@ -19,13 +20,16 @@ class BundleController extends GetxController {
     super.onInit();
   }
 
-  Future<void> fetchBundles() async {
+  Future<void> fetchBundles({bool forceRefresh = false}) async {
+    if (_bundlesLoaded && !forceRefresh) return;
     try {
       isLoading(true);
       final response = await _apiService.getBundles();
       bundleList.value = response.map((e) => BundleModel.fromJson(e)).toList();
+      _bundlesLoaded = true;
     } catch (e) {
       bundleList.clear();
+      _bundlesLoaded = true;
       print("Bundles Error: $e");
     } finally {
       isLoading(false);

@@ -8,6 +8,7 @@ class CategoryController extends GetxController {
 
   final ApiService _apiService = ApiService();
   final bool loadOnInit;
+  bool _categoriesLoaded = false;
 
   CategoryController({this.loadOnInit = true});
 
@@ -17,19 +18,22 @@ class CategoryController extends GetxController {
     super.onInit();
   }
 
-  Future<void> fetchCategories() async {
+  Future<void> fetchCategories({bool forceRefresh = false}) async {
+    if (_categoriesLoaded && !forceRefresh) return;
     try {
       isLoading(true);
 
       final data = await _apiService.getCategory();
 
       categoryList.value = data;
+      _categoriesLoaded = true;
     } catch (e) {
       // fallback (optional)
       categoryList.value = [
         CategoryModel(id: 1, name: "Food"),
         CategoryModel(id: 2, name: "Grocery"),
       ];
+      _categoriesLoaded = true;
     } finally {
       isLoading(false);
     }

@@ -225,14 +225,14 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _refreshData() async {
     await Future.wait<void>([
-      categoryController.fetchCategories(),
-      productController.fetchProducts(),
-      newArrivalController.fetchNewArrivals(),
-      recommendedController.fetchRecommended(),
-      bannerController.fetchBanners(),
-      topBannerController.fetchTopBanners(),
-      flashSaleController.fetchFlashSale(),
-      bundleController.fetchBundles(),
+      categoryController.fetchCategories(forceRefresh: true),
+      productController.fetchProducts(forceRefresh: true),
+      newArrivalController.fetchNewArrivals(forceRefresh: true),
+      recommendedController.fetchRecommended(forceRefresh: true),
+      bannerController.fetchBanners(forceRefresh: true),
+      topBannerController.fetchTopBanners(forceRefresh: true),
+      flashSaleController.fetchFlashSale(forceRefresh: true),
+      bundleController.fetchBundles(forceRefresh: true),
     ]);
     _nextLazySection = 3;
   }
@@ -474,7 +474,7 @@ class _HomePageState extends State<HomePage> {
     final gridChildAspectRatio = width < 360
         ? 0.50
         : width < 600
-        ? 0.56
+        ? 0.62
         : 0.58;
 
     return Scaffold(
@@ -569,10 +569,13 @@ class _HomePageState extends State<HomePage> {
                       scrollDirection: Axis.horizontal,
                       itemCount: 6,
                       separatorBuilder: (_, _) => const SizedBox(width: 10),
-                      itemBuilder: (_, _) => const Column(children: [
-                        SkeletonBox(width: 58, height: 58, radius: 29),
-                        SizedBox(height: 6), SkeletonBox(width: 58, height: 10),
-                      ]),
+                      itemBuilder: (_, _) => const Column(
+                        children: [
+                          SkeletonBox(width: 58, height: 58, radius: 29),
+                          SizedBox(height: 6),
+                          SkeletonBox(width: 58, height: 10),
+                        ],
+                      ),
                     );
                   }
 
@@ -813,9 +816,8 @@ class _HomePageState extends State<HomePage> {
                           child: CachedNetworkImage(
                             imageUrl: banner.image,
                             fit: BoxFit.fill,
-                            placeholder: (context, url) => const Center(
-                              child: const SkeletonBox(),
-                            ),
+                            placeholder: (context, url) =>
+                                const Center(child: const SkeletonBox()),
                             errorWidget: (context, url, error) => const Center(
                               child: Icon(
                                 Icons.image_not_supported,

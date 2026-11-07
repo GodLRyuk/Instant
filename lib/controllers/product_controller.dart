@@ -33,6 +33,12 @@ class ProductController extends GetxController {
   bool hasMore = true;
   final String? tagName;
   final bool loadOnInit;
+  bool _productsLoaded = false;
+  bool _newArrivalsLoaded = false;
+  bool _recommendedLoaded = false;
+  bool _bannersLoaded = false;
+  bool _topBannersLoaded = false;
+  bool _flashSaleLoaded = false;
   ProductController({this.tagName, this.loadOnInit = true});
 
   /// 🔥 Scroll Controller
@@ -67,16 +73,18 @@ class ProductController extends GetxController {
     }
   }
 
-  Future<void> fetchProducts() async {
+  Future<void> fetchProducts({bool forceRefresh = false}) async {
     try {
-      if (productList.isEmpty) {
+      if (!forceRefresh && _productsLoaded) return;
+      if (!forceRefresh && productList.isEmpty) {
         try {
-          await _loadCachedProducts();
+          _productsLoaded = await _loadCachedProducts();
         } catch (error, stackTrace) {
           debugPrint("Ignoring invalid cached products: $error");
           debugPrintStack(stackTrace: stackTrace);
         }
       }
+      if (!forceRefresh && _productsLoaded) return;
       if (productList.isEmpty) isLoading(true);
 
       final response = await _apiService.getProducts();
@@ -85,6 +93,7 @@ class ProductController extends GetxController {
           .toList();
       currentPage = 1;
       hasMore = response.hasMore;
+      _productsLoaded = true;
       await _saveCachedProducts(response.products, response.hasMore);
     } catch (e) {
       debugPrint("Product Error: $e");
@@ -93,10 +102,10 @@ class ProductController extends GetxController {
     }
   }
 
-  Future<void> _loadCachedProducts() async {
+  Future<bool> _loadCachedProducts() async {
     final preferences = await SharedPreferences.getInstance();
     final cachedData = preferences.getString(_productsCacheKey);
-    if (cachedData == null) return;
+    if (cachedData == null) return false;
 
     final decoded = jsonDecode(cachedData);
     if (decoded is! Map<String, dynamic> || decoded['products'] is! List) {
@@ -111,6 +120,7 @@ class ProductController extends GetxController {
           .toList(),
     );
     hasMore = decoded['hasMore'] == true;
+    return true;
   }
 
   Future<void> _saveCachedProducts(
@@ -124,7 +134,8 @@ class ProductController extends GetxController {
     );
   }
 
-  Future<void> fetchNewArrivals() async {
+  Future<void> fetchNewArrivals({bool forceRefresh = false}) async {
+    if (_newArrivalsLoaded && !forceRefresh) return;
     try {
       isLoading(true);
 
@@ -133,6 +144,7 @@ class ProductController extends GetxController {
       newArrivalList.value = response
           .map<ProductModel>((e) => ProductModel.fromJson(e))
           .toList();
+      _newArrivalsLoaded = true;
     } catch (e) {
       print("New Arrival Error: $e");
     } finally {
@@ -140,7 +152,8 @@ class ProductController extends GetxController {
     }
   }
 
-  Future<void> fetchRecommended() async {
+  Future<void> fetchRecommended({bool forceRefresh = false}) async {
+    if (_recommendedLoaded && !forceRefresh) return;
     try {
       isLoading(true);
 
@@ -149,6 +162,7 @@ class ProductController extends GetxController {
       recommendedList.value = response
           .map<ProductModel>((e) => ProductModel.fromJson(e))
           .toList();
+      _recommendedLoaded = true;
     } catch (e) {
       print("Recommended Error: $e");
     } finally {
@@ -194,11 +208,13 @@ class ProductController extends GetxController {
     }
   }
 
-  Future<void> fetchBanners() async {
+  Future<void> fetchBanners({bool forceRefresh = false}) async {
     try {
-      if (bannerList.isEmpty) {
-        await _restoreCachedBannerList(_bannersCacheKey, bannerList);
+      if (_bannersLoaded && !forceRefresh) return;
+      if (!forceRefresh && bannerList.isEmpty) {
+        _bannersLoaded = await _restoreCachedBannerList(_bannersCacheKey, bannerList);
       }
+      if (_bannersLoaded && !forceRefresh) return;
       if (bannerList.isEmpty) isLoading(true);
 
       final response = await _apiService.getAdvBanner();
@@ -207,6 +223,7 @@ class ProductController extends GetxController {
           .map<ProductModel>((e) => ProductModel.fromJson(e))
           .toList();
       await _saveCachedBannerList(_bannersCacheKey, response);
+      _bannersLoaded = true;
     } catch (error, stackTrace) {
       debugPrint("Banner Error: $error");
       debugPrintStack(stackTrace: stackTrace);
@@ -215,11 +232,13 @@ class ProductController extends GetxController {
     }
   }
 
-  Future<void> fetchTopBanners() async {
+  Future<void> fetchTopBanners({bool forceRefresh = false}) async {
     try {
-      if (topbannerList.isEmpty) {
-        await _restoreCachedBannerList(_topBannersCacheKey, topbannerList);
+      if (_topBannersLoaded && !forceRefresh) return;
+      if (!forceRefresh && topbannerList.isEmpty) {
+        _topBannersLoaded = await _restoreCachedBannerList(_topBannersCacheKey, topbannerList);
       }
+      if (_topBannersLoaded && !forceRefresh) return;
       if (topbannerList.isEmpty) isLoading(true);
 
       final response = await _apiService.getTopBanner();
@@ -228,6 +247,7 @@ class ProductController extends GetxController {
           .map<ProductModel>((e) => ProductModel.fromJson(e))
           .toList();
       await _saveCachedBannerList(_topBannersCacheKey, response);
+      _topBannersLoaded = true;
     } catch (error, stackTrace) {
       debugPrint("Top banner error: $error");
       debugPrintStack(stackTrace: stackTrace);
@@ -236,14 +256,14 @@ class ProductController extends GetxController {
     }
   }
 
-  Future<void> _restoreCachedBannerList(
+  Future<bool> _restoreCachedBannerList(
     String cacheKey,
     RxList<ProductModel> target,
   ) async {
     try {
       final preferences = await SharedPreferences.getInstance();
       final cachedData = preferences.getString(cacheKey);
-      if (cachedData == null) return;
+      if (cachedData == null) return false;
 
       final decoded = jsonDecode(cachedData);
       if (decoded is! List) {
@@ -257,9 +277,11 @@ class ProductController extends GetxController {
             )
             .toList(),
       );
+      return true;
     } catch (error, stackTrace) {
       debugPrint("Unable to restore cached banners: $error");
       debugPrintStack(stackTrace: stackTrace);
+      return false;
     }
   }
 
@@ -358,7 +380,8 @@ class ProductController extends GetxController {
     }
   }
 
-  Future<void> fetchFlashSale() async {
+  Future<void> fetchFlashSale({bool forceRefresh = false}) async {
+    if (_flashSaleLoaded && !forceRefresh) return;
     try {
       isFlashSaleLoading(true);
       final response = await _apiService.getFlashSale();
@@ -375,6 +398,7 @@ class ProductController extends GetxController {
         flashSaleProducts.clear();
         flashSaleEndTime.value = null;
       }
+      _flashSaleLoaded = true;
     } catch (e) {
       print("Flash Sale Error: $e");
     } finally {

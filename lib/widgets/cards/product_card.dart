@@ -133,7 +133,7 @@ class PromoProductCard extends StatelessWidget {
                   screenWidth * 0.022,
                   screenWidth * 0.012,
                   screenWidth * 0.022,
-                  screenWidth * 0.018,
+                  0,
                 ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -149,9 +149,7 @@ class PromoProductCard extends StatelessWidget {
                       ),
                       child: Container(
                         width: double.infinity,
-                        padding: EdgeInsets.symmetric(
-                          vertical: screenWidth < 360 ? 2 : 3,
-                        ),
+                        padding: EdgeInsets.symmetric(vertical: 2),
                         decoration: BoxDecoration(
                           color: Colors.green.shade600,
                           borderRadius: BorderRadius.circular(6),
@@ -160,7 +158,7 @@ class PromoProductCard extends StatelessWidget {
                           "VIEW",
                           textAlign: TextAlign.center,
                           style: TextStyle(
-                            fontSize: 10,
+                            fontSize: 12,
                             fontWeight: FontWeight.w800,
                             color: Colors.white,
                           ),

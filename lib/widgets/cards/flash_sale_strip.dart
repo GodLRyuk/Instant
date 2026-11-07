@@ -70,7 +70,7 @@ class _FlashSaleStripState extends State<FlashSaleStrip> {
     final height = MediaQuery.of(context).size.height;
 
     final double cardWidth = width * (width < 360 ? 0.34 : 0.28);
-    final double infoBlockHeight = cardWidth + (width < 360 ? 70 : 90);
+    const double infoBlockHeight = 100;
     final double stripHeight = cardWidth + infoBlockHeight;
 
     return Obx(() {
@@ -289,7 +289,7 @@ class _FlashSaleStripState extends State<FlashSaleStrip> {
                                   child: Container(
                                     width: double.infinity,
                                     padding: const EdgeInsets.symmetric(
-                                      vertical: 4,
+                                      vertical: 2,
                                     ),
                                     decoration: BoxDecoration(
                                       color: Colors.green.shade600,
@@ -299,7 +299,7 @@ class _FlashSaleStripState extends State<FlashSaleStrip> {
                                       "VIEW",
                                       textAlign: TextAlign.center,
                                       style: TextStyle(
-                                        fontSize: 15,
+                                        fontSize: 12,
                                         fontWeight: FontWeight.w800,
                                         color: Colors.white,
                                       ),
@@ -364,7 +364,7 @@ class _FlashSaleStripState extends State<FlashSaleStrip> {
             ),
           ),
 
-          SizedBox(height: height * 0.015),
+          // SizedBox(height: height * 0.015),
         ],
       );
     });
